@@ -3,782 +3,325 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-    <title>Age of Westeros: Throne & Conquest</title>
-    <style>
-        /* --- Ortak Değişkenler ve Sıfırlamalar --- */
-        :root {
-            --bg-color: #0b0c10;
-            --panel-color: rgba(18, 18, 18, 0.92);
-            --gold: #c5a059;
-            --gold-hover: #e5c17b;
-            --white: #f5f5f7;
-            --red: #8b0000;
-            --green: #2e8b57;
-            --border-style: 2px solid var(--gold);
-            --font-main: 'Cinzel', 'Georgia', serif;
-        }
-
-        * {
-            box-sizing: border-box;
-            margin: 0;
-            padding: 0;
-            user-select: none;
-            -webkit-user-select: none;
-            outline: none;
-        }
-
-        html, body {
-            width: 100%;
-            height: 100%;
-            overflow: hidden;
-            background-color: var(--bg-color);
-            color: var(--white);
-            font-family: var(--font-main);
-        }
-
-        /* --- Ana Menü ve Giriş Ekranı --- */
-        #main-menu {
-            position: absolute;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            z-index: 100;
-            background: radial-gradient(circle, rgba(20,20,30,0.8) 0%, rgba(5,5,10,1) 100%), 
-                        url('https://picsum.photos/1920/1080?grayscale&blur=2') no-repeat center center;
-            background-size: cover;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
-            padding: 20px;
-            transition: opacity 0.5s ease;
-        }
-
-        #menu-title {
-            font-size: 3rem;
-            color: var(--gold);
-            text-shadow: 0 0 10px rgba(197, 160, 89, 0.5), 0 5px 15px rgba(0,0,0,0.8);
-            text-align: center;
-            margin-bottom: 5px;
-            text-transform: uppercase;
-            letter-spacing: 4px;
-        }
-
-        #menu-subtitle {
-            font-size: 1.2rem;
-            color: var(--white);
-            letter-spacing: 2px;
-            margin-bottom: 30px;
-            text-shadow: 0 2px 4px rgba(0,0,0,0.8);
-        }
-
-        /* Hanedan Seçim Alanı */
-        #faction-selection-container {
-            width: 90%;
-            max-width: 1200px;
-            background: var(--panel-color);
-            border: var(--border-style);
-            border-radius: 8px;
-            padding: 20px;
-            display: flex;
-            flex-direction: column;
-            gap: 15px;
-            box-shadow: 0 10px 30px rgba(0,0,0,0.7);
-        }
-
-        #faction-selection-container h3 {
-            text-align: center;
-            color: var(--gold);
-            font-size: 1.5rem;
-            text-transform: uppercase;
-            border-bottom: 1px solid rgba(197, 160, 89, 0.3);
-            padding-bottom: 10px;
-        }
-
-        .faction-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
-            gap: 15px;
-            max-height: 400px;
-            overflow-y: auto;
-            padding-right: 10px;
-        }
-
-        /* Özel Scrollbar */
-        .faction-grid::-webkit-scrollbar, .scrollable::-webkit-scrollbar {
-            width: 6px;
-        }
-        .faction-grid::-webkit-scrollbar-thumb, .scrollable::-webkit-scrollbar-thumb {
-            background-color: var(--gold);
-            border-radius: 3px;
-        }
-
-        .faction-card {
-            background: rgba(40, 40, 45, 0.5);
-            border: 1px solid rgba(197, 160, 89, 0.2);
-            border-radius: 5px;
-            padding: 15px;
-            cursor: pointer;
-            transition: all 0.2s ease;
-            position: relative;
-            overflow: hidden;
-        }
-
-        .faction-card:hover {
-            border-color: var(--gold);
-            background: rgba(197, 160, 89, 0.1);
-            transform: translateY(-2px);
-        }
-
-        .faction-card.selected {
-            border: 2px solid var(--gold);
-            background: rgba(197, 160, 89, 0.2);
-            box-shadow: 0 0 15px rgba(197, 160, 89, 0.3);
-        }
-
-        .faction-header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-bottom: 8px;
-        }
-
-        .faction-name {
-            font-size: 1.2rem;
-            font-weight: bold;
-            color: var(--gold);
-        }
-
-        .faction-sigil {
-            font-size: 1.5rem;
-        }
-
-        .faction-bonus {
-            font-size: 0.85rem;
-            color: #ccc;
-            margin-bottom: 8px;
-            line-height: 1.4;
-        }
-
-        .faction-uu {
-            font-size: 0.85rem;
-            color: var(--gold-hover);
-            font-style: italic;
-        }
-
-        /* Başlat Butonu */
-        #start-game-btn {
-            align-self: center;
-            padding: 12px 40px;
-            font-size: 1.2rem;
-            font-family: var(--font-main);
-            color: var(--bg-color);
-            background: var(--gold);
-            border: none;
-            border-radius: 4px;
-            cursor: pointer;
-            text-transform: uppercase;
-            font-weight: bold;
-            transition: all 0.2s ease;
-            box-shadow: 0 4px 10px rgba(197, 160, 89, 0.4);
-            margin-top: 10px;
-        }
-
-        #start-game-btn:hover {
-            background: var(--gold-hover);
-            transform: scale(1.05);
-            box-shadow: 0 6px 15px rgba(197, 160, 89, 0.6);
-        }
-
-        #start-game-btn:disabled {
-            background: #555;
-            color: #888;
-            cursor: not-allowed;
-            transform: none;
-            box-shadow: none;
-        }
-
-        /* --- Ana Oyun Alanı ve Canvas --- */
-        #game-container {
-            display: none;
-            position: relative;
-            width: 100vw;
-            height: 100vh;
-            overflow: hidden;
-        }
-
-        #game-canvas {
-            position: absolute;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            z-index: 1;
-            cursor: grab;
-            image-rendering: pixelated; /* GPU dostu pikselli-net keskin çizimler için */
-        }
-
-        #game-canvas:active {
-            cursor: grabbing;
-        }
-
-        /* --- Oyun İçi Arayüz (HUD) --- */
-        #ui-overlay {
-            position: absolute;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            z-index: 10;
-            pointer-events: none; /* Tıklamaların arkadaki canvas'a geçmesini sağlar */
-            display: flex;
-            flex-direction: column;
-            justify-content: space-between;
-        }
-
-        #ui-overlay * {
-            pointer-events: auto; /* UI elemanlarına tekrar tıklama yetkisi verir */
-        }
-
-        /* Üst Panel (Kaynak Çubuğu) */
-        #top-bar {
-            width: 100%;
-            background: linear-gradient(180deg, rgba(0,0,0,0.9) 0%, rgba(0,0,0,0.7) 100%);
-            border-bottom: 2px solid var(--gold);
-            padding: 8px 20px;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            box-shadow: 0 4px 10px rgba(0,0,0,0.5);
-        }
-
-        .faction-info-hud {
-            display: flex;
-            align-items: center;
-            gap: 10px;
-        }
-
-        #hud-sigil {
-            font-size: 1.8rem;
-        }
-
-        #hud-house-name {
-            font-size: 1.1rem;
-            color: var(--gold);
-            font-weight: bold;
-            letter-spacing: 1px;
-        }
-
-        .resource-container {
-            display: flex;
-            gap: 20px;
-            align-items: center;
-        }
-
-        .resource-item {
-            display: flex;
-            align-items: center;
-            gap: 8px;
-            font-size: 1rem;
-            font-weight: bold;
-            color: var(--white);
-            background: rgba(255, 255, 255, 0.05);
-            padding: 4px 10px;
-            border-radius: 4px;
-            border: 1px solid rgba(255, 255, 255, 0.1);
-        }
-
-        .resource-icon {
-            font-size: 1.1rem;
-        }
-
-        .resource-value {
-            font-family: monospace; /* Sayıların kaymaması için */
-        }
-
-        /* Alt Panel (Detay ve Komut Paneli) */
-        #bottom-panel {
-            width: 100%;
-            background: var(--panel-color);
-            border-top: var(--border-style);
-            height: 160px;
-            display: grid;
-            grid-template-columns: 200px 1fr 240px; /* Detaylar | Komut Kartı | Harita */
-            box-shadow: 0 -5px 15px rgba(0,0,0,0.6);
-            backdrop-filter: blur(5px);
-        }
-
-        /* Sol: Detay Paneli */
-        #selection-details {
-            border-right: 1px solid rgba(197, 160, 89, 0.3);
-            padding: 10px;
-            display: flex;
-            flex-direction: column;
-            justify-content: space-between;
-        }
-
-        .detail-header {
-            font-size: 0.95rem;
-            color: var(--gold);
-            font-weight: bold;
-            border-bottom: 1px solid rgba(197, 160, 89, 0.2);
-            padding-bottom: 5px;
-            white-space: nowrap;
-            overflow: hidden;
-            text-overflow: ellipsis;
-        }
-
-        .detail-body {
-            display: flex;
-            align-items: center;
-            gap: 10px;
-            flex-grow: 1;
-            margin-top: 5px;
-        }
-
-        .detail-portrait {
-            width: 50px;
-            height: 50px;
-            background: #222;
-            border: 1px solid var(--gold);
-            border-radius: 4px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 1.5rem;
-        }
-
-        .detail-stats {
-            font-size: 0.75rem;
-            line-height: 1.4;
-            display: flex;
-            flex-direction: column;
-            gap: 2px;
-        }
-
-        .hp-bar-container {
-            width: 100%;
-            height: 8px;
-            background: #444;
-            border-radius: 4px;
-            overflow: hidden;
-            margin-top: 3px;
-            border: 1px solid #111;
-        }
-
-        .hp-bar-fill {
-            height: 100%;
-            background: var(--green);
-            width: 100%;
-            transition: width 0.1s ease;
-        }
-
-        /* Orta: Komut Kartı Grid Sistemi (Age of Empires Tarzı) */
-        #command-card {
-            padding: 8px;
-            display: grid;
-            grid-template-columns: repeat(5, 1fr);
-            grid-template-rows: repeat(3, 1fr);
-            gap: 4px;
-            max-width: 450px;
-            justify-self: center;
-            width: 100%;
-            height: 100%;
-        }
-
-        .cmd-btn {
-            background: #2a2a2e;
-            border: 1px solid rgba(197, 160, 89, 0.4);
-            border-radius: 3px;
-            color: var(--white);
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
-            cursor: pointer;
-            font-family: var(--font-main);
-            font-size: 0.7rem;
-            position: relative;
-            transition: all 0.1s ease;
-            text-transform: uppercase;
-        }
-
-        .cmd-btn:hover {
-            background: var(--gold);
-            color: var(--bg-color);
-            border-color: var(--white);
-        }
-
-        .cmd-btn:active {
-            transform: scale(0.95);
-        }
-
-        .cmd-btn .shortcut {
-            position: absolute;
-            top: 2px;
-            right: 4px;
-            font-size: 0.55rem;
-            color: rgba(255,255,255,0.4);
-            font-weight: bold;
-        }
-
-        .cmd-btn:hover .shortcut {
-            color: var(--bg-color);
-        }
-
-        /* Sağ: Minimap Kutusu */
-        #minimap-container {
-            border-left: 1px solid rgba(197, 160, 89, 0.3);
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            background: #050508;
-            padding: 5px;
-            position: relative;
-        }
-
-        #minimap-canvas {
-            width: 150px;
-            height: 150px;
-            background: #111;
-            border: 1px solid rgba(197, 160, 89, 0.5);
-            cursor: crosshair;
-        }
-
-        /* Bildirim ve Log Ekranı */
-        #log-panel {
-            position: absolute;
-            top: 60px;
-            left: 20px;
-            max-width: 300px;
-            height: 150px;
-            pointer-events: none;
-            display: flex;
-            flex-direction: column-reverse;
-            gap: 5px;
-            overflow: hidden;
-            font-size: 0.8rem;
-        }
-
-        .log-msg {
-            background: rgba(0,0,0,0.7);
-            border-left: 3px solid var(--gold);
-            padding: 6px 10px;
-            border-radius: 0 4px 4px 0;
-            animation: fadeIn 0.3s ease forwards;
-            color: #ddd;
-            text-shadow: 1px 1px 2px #000;
-        }
-
-        /* Mobil Kontroller */
-        #mobile-controls {
-            display: none;
-            position: absolute;
-            right: 15px;
-            bottom: 180px;
-            flex-direction: column;
-            gap: 10px;
-            z-index: 12;
-        }
-
-        .mob-btn {
-            width: 50px;
-            height: 50px;
-            border-radius: 50%;
-            background: rgba(0,0,0,0.85);
-            border: 2px solid var(--gold);
-            color: var(--white);
-            font-size: 1.2rem;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            box-shadow: 0 4px 10px rgba(0,0,0,0.5);
-        }
-
-        .mob-btn:active {
-            background: var(--gold);
-            color: var(--bg-color);
-        }
-
-        /* --- Sonuç / Ölüm (Game Over) Ekranı --- */
-        #game-over-screen {
-            display: none;
-            position: absolute;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            z-index: 150;
-            background: rgba(0,0,0,0.95);
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
-            text-align: center;
-        }
-
-        #game-over-title {
-            font-size: 3.5rem;
-            color: var(--red);
-            text-shadow: 0 0 20px rgba(139, 0, 0, 0.8);
-            margin-bottom: 20px;
-            text-transform: uppercase;
-            letter-spacing: 5px;
-        }
-
-        #game-over-text {
-            font-size: 1.3rem;
-            margin-bottom: 40px;
-            max-width: 600px;
-            color: #ccc;
-        }
-
-        #restart-btn {
-            padding: 12px 30px;
-            background: var(--gold);
-            border: none;
-            border-radius: 4px;
-            color: var(--bg-color);
-            font-family: var(--font-main);
-            font-size: 1.1rem;
-            font-weight: bold;
-            cursor: pointer;
-            text-transform: uppercase;
-            transition: all 0.2s ease;
-        }
-
-        #restart-btn:hover {
-            background: var(--gold-hover);
-            transform: scale(1.05);
-        }
-
-        /* --- Animasyonlar --- */
-        @keyframes fadeIn {
-            from { opacity: 0; transform: translateX(-10px); }
-            to { opacity: 1; transform: translateX(0); }
-        }
-
-        /* --- Mobil Tasarım İnce Ayarları --- */
-        @media (max-width: 768px) {
-            #menu-title { font-size: 2rem; }
-            #menu-subtitle { font-size: 0.9rem; }
-            
-            #bottom-panel {
-                grid-template-columns: 120px 1fr;
-                height: 120px;
-            }
-            #minimap-container { display: none; } /* Mobilde minimap'i gizle veya üst panele al */
-            #command-card {
-                grid-template-columns: repeat(4, 1fr);
-                grid-template-rows: repeat(2, 1fr);
-                gap: 2px;
-            }
-            #mobile-controls { display: flex; }
-            .resource-container { gap: 10px; }
-            .resource-item { font-size: 0.8rem; padding: 2px 6px; }
-            #hud-sigil { font-size: 1.3rem; }
-            #hud-house-name { font-size: 0.85rem; }
-        }
-    </style>
+    <title>Westeros: Kingdoms of D&D 5.5e</title>
+    <!-- CSS Dosyaları -->
+    <link rel="stylesheet" href="style-ui.css">
+    <link rel="stylesheet" href="style-game.css">
+    <!-- Google Fonts Entegrasyonu -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;700;900&family=Montserrat:wght@300;400;600&display=swap" rel="stylesheet">
 </head>
 <body>
 
-    <!-- 1. ANA MENÜ VE SEÇİM EKRANI -->
-    <div id="main-menu">
-        <h1 id="menu-title">Age of Westeros</h1>
-        <h2 id="menu-subtitle">Throne & Conquest</h2>
-        
-        <div id="faction-selection-container">
-            <h3>Bir Krallık Seçin ve Westeros'u Fhedin</h3>
-            <div class="faction-grid scrollable" id="faction-grid">
-                <!-- Hanedan Kartları JS ile doldurulacak -->
-            </div>
-            <button id="start-game-btn" disabled>Savaşa Başla (Deathmatch)</button>
-        </div>
-    </div>
+    <!-- GİRİŞ VE ÜLKE SEÇİM EKRANI -->
+    <div id="screen-faction-select" class="screen-overlay active">
+        <div class="faction-select-container">
+            <header class="faction-select-header">
+                <h1 class="main-title">WESTEROS</h1>
+                <p class="subtitle">D&D 5.5e Kuralları ile Savaş ve Ekonomi Simülasyonu</p>
+                <div class="divider"></div>
+            </header>
 
-    <!-- 2. ANA OYUN SİMÜLASYONU VE CANVAS -->
-    <div id="game-container">
-        <!-- Oyun Çizim Ekranı -->
-        <canvas id="game-canvas"></canvas>
-
-        <!-- OYUN İÇİ ARAYÜZ OVERLAY -->
-        <div id="ui-overlay">
-            
-            <!-- Üst Bar (Kaynaklar) -->
-            <div id="top-bar">
-                <div class="faction-info-hud">
-                    <span id="hud-sigil">🐺</span>
-                    <span id="hud-house-name">House Stark</span>
-                </div>
-                <div class="resource-container">
-                    <div class="resource-item" title="Yiyecek">
-                        <span class="resource-icon">🌾</span>
-                        <span class="resource-value" id="res-food">20000</span>
-                    </div>
-                    <div class="resource-item" title="Odun">
-                        <span class="resource-icon">🪵</span>
-                        <span class="resource-value" id="res-wood">20000</span>
-                    </div>
-                    <div class="resource-item" title="Altın">
-                        <span class="resource-icon">🪙</span>
-                        <span class="resource-value" id="res-gold">20000</span>
-                    </div>
-                    <div class="resource-item" title="Taş">
-                        <span class="resource-icon">🪨</span>
-                        <span class="resource-value" id="res-stone">20000</span>
-                    </div>
-                    <div class="resource-item" title="Nüfus">
-                        <span class="resource-icon">👥</span>
-                        <span class="resource-value" id="res-pop">0/200</span>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Bildirim Log Paneli -->
-            <div id="log-panel" id="log-panel">
-                <!-- Sistem mesajları burada akacak -->
-            </div>
-
-            <!-- Mobil Kontrol Ek Butonları -->
-            <div id="mobile-controls">
-                <button class="mob-btn" id="mob-attack" title="Saldırı Modu">⚔️</button>
-                <button class="mob-btn" id="mob-stop" title="Dur">🛑</button>
-                <button class="mob-btn" id="mob-garrison" title="Korumaya Al">🛡️</button>
-            </div>
-
-            <!-- Alt Panel (Durum, Komut Kartı ve Minimap) -->
-            <div id="bottom-panel">
-                <!-- Seçili Birim/Bina Bilgisi -->
-                <div id="selection-details">
-                    <div class="detail-header" id="sel-title">Köy Merkezi</div>
-                    <div class="detail-body">
-                        <div class="detail-portrait" id="sel-portrait">🏰</div>
-                        <div class="detail-stats">
-                            <div id="sel-hp-text">HP: 2400 / 2400</div>
-                            <div class="hp-bar-container">
-                                <div class="hp-bar-fill" id="sel-hp-fill" style="width: 100%;"></div>
-                            </div>
-                            <div id="sel-substats" style="margin-top:4px;">
-                                Zırh: 3/3 <br> Hasar: 0
-                            </div>
+            <main class="faction-grid-container">
+                <!-- 9 Farklı Krallık Kartı -->
+                <div class="faction-card" data-faction="kuzey">
+                    <div class="faction-banner banner-kuzey"></div>
+                    <div class="faction-content">
+                        <h2 class="faction-name">Kuzey Krallığı</h2>
+                        <h3 class="house-name">Hane Stark</h3>
+                        <p class="faction-motto">"Kış Geliyor"</p>
+                        <div class="faction-traits">
+                            <span class="trait-badge">+2 CON</span>
+                            <span class="trait-badge">Soğuk Direnci</span>
+                            <span class="trait-badge">Direwolf Yoldaşı</span>
                         </div>
+                        <p class="faction-desc">Geniş ve çetin kış şartlarında hayatta kalmış dayanıklı savaşçılar. Zorlu hava koşullarına dayanıklılık ve yüksek savunma kabiliyetleri vardır.</p>
                     </div>
                 </div>
 
-                <!-- Komut Butonları Grid -->
-                <div id="command-card" id="command-card">
-                    <!-- Dinamik olarak o an seçili birimin yapabileceği eylemler grid tuşları olarak dolacak -->
+                <div class="faction-card" data-faction="batidiyar">
+                    <div class="faction-banner banner-batidiyar"></div>
+                    <div class="faction-content">
+                        <h2 class="faction-name">Batıdiyar</h2>
+                        <h3 class="house-name">Hane Lannister</h3>
+                        <p class="faction-motto">"Beni Kükrerken Duy"</p>
+                        <div class="faction-traits">
+                            <span class="trait-badge">+2 CHA</span>
+                            <span class="trait-badge">Altın Madeni Bonusu</span>
+                            <span class="trait-badge">Kızıl Muhafızlar</span>
+                        </div>
+                        <p class="faction-desc">Zengin madenlere sahip, altın gücüyle donatılmış paralı ordular. Ekonomi ve karizmatik liderlik yetenekleri üst seviyededir.</p>
+                    </div>
                 </div>
 
-                <!-- Sağ Köşe Minimap -->
-                <div id="minimap-container">
-                    <canvas id="minimap-canvas" width="150" height="150"></canvas>
+                <div class="faction-card" data-faction="demir-adalar">
+                    <div class="faction-banner banner-demir"></div>
+                    <div class="faction-content">
+                        <h2 class="faction-name">Demir Adalar</h2>
+                        <h3 class="house-name">Hane Greyjoy</h3>
+                        <p class="faction-motto">"Biz Tohum Ekmeyiz"</p>
+                        <div class="faction-traits">
+                            <span class="trait-badge">+2 STR</span>
+                            <span class="trait-badge">Deniz Savaşçısı</span>
+                            <span class="trait-badge">Yağma Avantajı</span>
+                        </div>
+                        <p class="faction-desc">Denizlerin hakimi, amansız yağmacılar. Gemi inşa hızları yüksektir ve su üzerindeki muharebelerde ezici üstünlüğe sahiptirler.</p>
+                    </div>
                 </div>
-            </div>
 
+                <div class="faction-card" data-faction="nehir-topraklari">
+                    <div class="faction-banner banner-nehir"></div>
+                    <div class="faction-content">
+                        <h2 class="faction-name">Nehir Toprakları</h2>
+                        <h3 class="house-name">Hane Tully</h3>
+                        <p class="faction-motto">"Aile, Görev, Onur"</p>
+                        <div class="faction-traits">
+                            <span class="trait-badge">+2 WIS</span>
+                            <span class="trait-badge">Nehir Navigasyonu</span>
+                            <span class="trait-badge">Esnek Savunma</span>
+                        </div>
+                        <p class="faction-desc">Westeros'un kalbinde, nehir ağlarıyla çevrili stratejik bölge. Ticaret yolları ve hızlı lojistik avantajları bulunur.</p>
+                    </div>
+                </div>
+
+                <div class="faction-card" data-faction="vadi">
+                    <div class="faction-banner banner-vadi"></div>
+                    <div class="faction-content">
+                        <h2 class="faction-name">Arryn Vadisi</h2>
+                        <h3 class="house-name">Hane Arryn</h3>
+                        <p class="faction-motto">"Onur Kadar Yüksek"</p>
+                        <div class="faction-traits">
+                            <span class="trait-badge">+2 DEX</span>
+                            <span class="trait-badge">Yüksek İrtifa</span>
+                            <span class="trait-badge">Şahin Şövalyeleri</span>
+                        </div>
+                        <p class="faction-desc">Aşılamaz sarp dağların ardında korunan şövalyeler. Süvari saldırıları ve savunma hattı kurmada ustadırlar.</p>
+                    </div>
+                </div>
+
+                <div class="faction-card" data-faction="menzil">
+                    <div class="faction-banner banner-menzil"></div>
+                    <div class="faction-content">
+                        <h2 class="faction-name">Menzil</h2>
+                        <h3 class="house-name">Hane Tyrell</h3>
+                        <p class="faction-motto">"Güçlenerek Büyür"</p>
+                        <div class="faction-traits">
+                            <span class="trait-badge">+2 INT</span>
+                            <span class="trait-badge">Tarım Bereket</span>
+                            <span class="trait-badge">Geniş Ordu Limiti</span>
+                        </div>
+                        <p class="faction-desc">Westeros'un en verimli toprakları. Yiyecek üretimi ve nüfus artışı oldukça hızlıdır, devasa orduları besleyebilirler.</p>
+                    </div>
+                </div>
+
+                <div class="faction-card" data-faction="tac-topraklari">
+                    <div class="faction-banner banner-tac"></div>
+                    <div class="faction-content">
+                        <h2 class="faction-name">Taç Toprakları</h2>
+                        <h3 class="house-name">Kralın Şehri</h3>
+                        <p class="faction-motto">"Ateş ve Kan / Öfke Bizimdir"</p>
+                        <div class="faction-traits">
+                            <span class="trait-badge">+2 CHA</span>
+                            <span class="trait-badge">Kraliyet Otoritesi</span>
+                            <span class="trait-badge">Kızıl Kale Kuşatması</span>
+                        </div>
+                        <p class="faction-desc">İmparatorluğun başkenti. Teknolojik araştırmalar, sur dayanıklılığı ve merkezi yönetim gücü üst seviyededir.</p>
+                    </div>
+                </div>
+
+                <div class="faction-card" data-faction="firtinadiyar">
+                    <div class="faction-banner banner-firtina"></div>
+                    <div class="faction-content">
+                        <h2 class="faction-name">Fırtına Diyarı</h2>
+                        <h3 class="house-name">Hane Baratheon</h3>
+                        <p class="faction-motto">"Öfke Bizimdir"</p>
+                        <div class="faction-traits">
+                            <span class="trait-badge">+2 STR</span>
+                            <span class="trait-badge">Kuşatma Direnci</span>
+                            <span class="trait-badge">Yıldırım Öfkesi</span>
+                        </div>
+                        <p class="faction-desc">Fırtınalı kıyılarda yükselen sarsılmaz kaleler ve iradeli savaşçılar. Yakın dövüş hasarları ve bina dirençleri yüksektir.</p>
+                    </div>
+                </div>
+
+                <div class="faction-card" data-faction="dorne">
+                    <div class="faction-banner banner-dorne"></div>
+                    <div class="faction-content">
+                        <h2 class="faction-name">Dorne Prensliği</h2>
+                        <h3 class="house-name">Hane Martell</h3>
+                        <p class="faction-motto">"Eğilmez, Bükülmez, Kırılmaz"</p>
+                        <div class="faction-traits">
+                            <span class="trait-badge">+2 DEX</span>
+                            <span class="trait-badge">Çöl Isısı Uyumu</span>
+                            <span class="trait-badge">Zehirli Silahlar</span>
+                        </div>
+                        <p class="faction-desc">Güneşli çöllerin yılmaz savaşçıları. Hızlı vur-kaç taktikleri ve düşmanları yıpratan zehir hasarı mekaniklerine sahiptirler.</p>
+                    </div>
+                </div>
+            </main>
+
+            <footer class="faction-select-footer">
+                <button id="btn-start-game" class="btn-royal" disabled>Savaşa Başla</button>
+            </footer>
         </div>
     </div>
 
-    <!-- 3. GAME OVER (OYUN SONU) EKRANI -->
-    <div id="game-over-screen" id="game-over-screen">
-        <h1 id="game-over-title">YENİLGİ</h1>
-        <p id="game-over-text">Demir Taht mücadelesinde hanedanınız kılıçtan geçirildi...</p>
-        <button id="restart-btn" onclick="location.reload()">Ana Menüye Dön</button>
+    <!-- OYUN İÇİ HUD VE VIEWPORT ALANI -->
+    <div id="screen-game" class="game-layout">
+        <!-- Canvas Katmanı -->
+        <div id="canvas-container">
+            <canvas id="gameCanvas"></canvas>
+        </div>
+
+        <!-- Üst Kaynak Barı (Age of Empires Stili) -->
+        <header class="hud-top-bar">
+            <div class="resource-container">
+                <div class="resource-item" id="res-food" title="Yiyecek">
+                    <span class="resource-icon">🌾</span>
+                    <span class="resource-value">500</span>
+                </div>
+                <div class="resource-item" id="res-wood" title="Odun">
+                    <span class="resource-icon">🪵</span>
+                    <span class="resource-value">300</span>
+                </div>
+                <div class="resource-item" id="res-gold" title="Altın">
+                    <span class="resource-icon">🪙</span>
+                    <span class="resource-value">100</span>
+                </div>
+                <div class="resource-item" id="res-stone" title="Taş">
+                    <span class="resource-icon">🪨</span>
+                    <span class="resource-value">0</span>
+                </div>
+                <div class="resource-item" id="res-pop" title="Nüfus / Ordu Limiti">
+                    <span class="resource-icon">👥</span>
+                    <span class="resource-value">4/20</span>
+                </div>
+            </div>
+
+            <div class="game-phase-indicator">
+                <span id="txt-current-faction">Hane Stark</span>
+                <span id="txt-turn-counter">Girişim Sırası: Tur 1</span>
+            </div>
+
+            <div class="menu-controls">
+                <button id="btn-toggle-menu" class="btn-hud-small">Menü</button>
+            </div>
+        </header>
+
+        <!-- Sol Yan Panel: Mini Harita ve Harita Navigasyonu -->
+        <aside class="hud-sidebar-left">
+            <div class="minimap-container">
+                <div class="minimap-header">WESTEROS HARİTASI (220x220)</div>
+                <div id="minimap-viewport">
+                    <!-- Dinamik küçük harita canvas yardımıyla çizilecek -->
+                    <canvas id="minimapCanvas"></canvas>
+                </div>
+            </div>
+            <div class="camera-coordinates">
+                <span>X: <strong id="cam-x">110</strong></span>
+                <span>Y: <strong id="cam-y">110</strong></span>
+            </div>
+        </aside>
+
+        <!-- Sağ Yan Panel: D&D 5.5e Detaylı Birim / Bina Bilgi Paneli -->
+        <aside class="hud-sidebar-right" id="info-panel">
+            <div class="panel-header">SEÇİLİ BİRİM DETAYLARI</div>
+            <div class="panel-content empty" id="info-panel-empty">
+                <p>Bir birim veya bina seçin.</p>
+            </div>
+            <div class="panel-content active-details hidden" id="info-panel-details">
+                <div class="unit-card-header">
+                    <img id="info-unit-avatar" src="" alt="Avatar" class="unit-avatar">
+                    <div>
+                        <h4 id="info-unit-name">Kuzeyli Koruyucu</h4>
+                        <span id="info-unit-type">İnsansı (Savaşçı)</span>
+                    </div>
+                </div>
+                <div class="stat-grid">
+                    <div class="stat-box" title="Strength">STR: <span id="stat-str">14</span></div>
+                    <div class="stat-box" title="Dexterity">DEX: <span id="stat-dex">12</span></div>
+                    <div class="stat-box" title="Constitution">CON: <span id="stat-con">16</span></div>
+                    <div class="stat-box" title="Intelligence">INT: <span id="stat-int">10</span></div>
+                    <div class="stat-box" title="Wisdom">WIS: <span id="stat-wis">12</span></div>
+                    <div class="stat-box" title="Charisma">CHA: <span id="stat-cha">10</span></div>
+                </div>
+                <div class="dnd-battle-stats">
+                    <div class="battle-stat-item">🛡️ AC: <strong id="info-ac">16</strong></div>
+                    <div class="battle-stat-item">❤️ HP: <strong id="info-hp">12/12</strong></div>
+                    <div class="battle-stat-item">⚡ Girişim: <strong id="info-initiative">15</strong></div>
+                </div>
+                <div class="action-attacks-list">
+                    <h5>D&D Eylemleri & Saldırılar:</h5>
+                    <ul id="info-attacks">
+                        <li><strong>Ulu Kılıç:</strong> +4 Vuruş Bonusu, 1d12+2 Biçme Hasarı</li>
+                    </ul>
+                </div>
+            </div>
+        </aside>
+
+        <!-- Alt Kontrol Paneli: AoE Tarzı Komut ve Üretim Butonları -->
+        <footer class="hud-bottom-bar">
+            <div class="action-grid" id="action-commands-grid">
+                <!-- Dinamik olarak seçili binaya veya birime göre butonlar dolacak -->
+                <button class="action-btn" title="İşçi Üret (Maliyet: 50 Yiyecek)" data-action="train-villager">
+                    <span class="action-shortcut">Q</span>
+                    <span class="action-icon">👷</span>
+                    <span class="action-label">İşçi Üret</span>
+                </button>
+                <button class="action-btn" title="Kışla İnşa Et (Maliyet: 175 Odun)" data-action="build-barracks">
+                    <span class="action-shortcut">W</span>
+                    <span class="action-icon">🛡️</span>
+                    <span class="action-label">Kışla Yap</span>
+                </button>
+                <button class="action-btn" title="Liman İnşa Et (Maliyet: 150 Odun)" data-action="build-dock">
+                    <span class="action-shortcut">E</span>
+                    <span class="action-icon">⚓</span>
+                    <span class="action-label">Liman Yap</span>
+                </button>
+            </div>
+
+            <!-- Zar Atış Günlüğü (Savaş logları için D&D simülasyon çıktısı) -->
+            <div class="battle-log-container">
+                <div class="log-header">Zar ve Savaş Günlüğü</div>
+                <div id="battle-logs" class="log-body">
+                    <p class="log-entry system">[Sistem] Oyun başladı. Westeros'u fethetmek için hazır olun.</p>
+                </div>
+            </div>
+        </footer>
+
+        <!-- Mobil Dokunmatik Ekranlar için Sanal Kontrol Katmanı -->
+        <div id="mobile-controls-overlay">
+            <div id="virtual-joystick-container">
+                <div id="joystick-base">
+                    <div id="joystick-handle"></div>
+                </div>
+            </div>
+            <div class="mobile-action-shortcuts">
+                <button id="btn-mobile-select" class="btn-mobile">Seç</button>
+                <button id="btn-mobile-attack" class="btn-mobile alert">Saldır</button>
+                <button id="btn-mobile-cancel" class="btn-mobile cancel">İptal</button>
+            </div>
+        </div>
     </div>
 
-    <!-- SADECE SÜRÜM / GELİŞTİRME ALTYAPISI - ADIM 2 İLE BAĞLANACAK ÇEKİRDEK KODLAR -->
-    <script>
-        // Adım 1 için Hanedan Veri Şablonu
-        const HousesData = [
-            { id: 'stark', name: 'Kuzey (House Stark)', sigil: '🐺', bonus: 'Kereste madenciliği %15 daha hızlıdır. Piyadeler +1 zırh ile başlar.', uu: 'Winter Wolves', color: '#90a4ae' },
-            { id: 'lannister', name: 'Batıdiyar (Lannister)', sigil: '🦁', bonus: 'Altın madenciliği %20 daha hızlıdır. Ağır süvariler %10 ucuzdur.', uu: 'Lion Knights', color: '#b71c1c' },
-            { id: 'greyjoy', name: 'Demiradalar (Greyjoy)', sigil: '🦑', bonus: 'Liman binaları ve gemiler %20 daha ucuzdur. Balıkçılık hızlıdır.', uu: 'Ironborn Reaver', color: '#37474f' },
-            { id: 'tully', name: 'Nehirtoprakları (Tully)', sigil: '🐟', bonus: 'Çiftçilik %15 hızlıdır. Binalar %15 daha hızlı inşa edilir.', uu: 'Riverrun Guard', color: '#1565c0' },
-            { id: 'arryn', name: 'Vadi (Arryn)', sigil: '🦅', bonus: 'Kaleler ve kuleler %20 daha fazla cana sahiptir. Süvariler hızlıdır.', uu: 'Knights of the Vale', color: '#e0f7fa' },
-            { id: 'tyrell', name: 'Menzil (Tyrell)', sigil: '🌹', bonus: 'Yiyecek üretimi %20 daha hızlıdır. Başlangıçta fazladan nüfus limiti sağlar.', uu: 'Reach Crossbowman', color: '#2e7d32' },
-            { id: 'baratheon', name: 'Fırtınadiyar (Baratheon)', sigil: '🦌', bonus: 'Kuşatma silahları %15 daha dayanıklı ve %10 daha ucuza üretilir.', uu: 'Stag Knight', color: '#fbc02d' },
-            { id: 'martell', name: 'Dorne (Martell)', sigil: '☀️', bonus: 'Piyadeler %10 daha hızlı hareket eder. Okçular %15 daha ucuza mal olur.', uu: 'Sand Snake', color: '#e65100' },
-            { id: 'targaryen', name: 'Taç Toprakları (Targaryen)', sigil: '🐉', bonus: 'Altın madenciliği %10 hızlıdır. Ejderha muhafızları ateş zırhına sahiptir.', uu: 'Dragon Rider', color: '#212121' }
-        ];
+    <!-- Menü Ekranı (Ayarlar/Yeniden Başlat) -->
+    <div id="menu-modal" class="modal-overlay hidden">
+        <div class="modal-content">
+            <h2>OYUN MENÜSÜ</h2>
+            <button id="btn-resume" class="btn-royal">Oyuna Dön</button>
+            <button id="btn-restart" class="btn-royal alert">Yeniden Başlat</button>
+            <p class="modal-version">v1.0.0-dnd5.5-westeros</p>
+        </div>
+    </div>
 
-        let selectedFaction = null;
-
-        // UI Elementleri
-        const factionGrid = document.getElementById('faction-grid');
-        const startBtn = document.getElementById('start-game-btn');
-        const mainMenu = document.getElementById('main-menu');
-        const gameContainer = document.getElementById('game-container');
-        const logPanel = document.getElementById('log-panel');
-
-        // Hanedanları Listeleme
-        function renderFactions() {
-            factionGrid.innerHTML = '';
-            HousesData.forEach(house => {
-                const card = document.createElement('div');
-                card.className = 'faction-card';
-                card.dataset.id = house.id;
-                card.innerHTML = `
-                    <div class="faction-header">
-                        <span class="faction-name">${house.name}</span>
-                        <span class="faction-sigil">${house.sigil}</span>
-                    </div>
-                    <div class="faction-bonus"><strong>Hanedan Bonusu:</strong> ${house.bonus}</div>
-                    <div class="faction-uu"><strong>Özel Birim:</strong> ${house.uu}</div>
-                `;
-                card.addEventListener('click', () => selectFaction(house.id));
-                factionGrid.appendChild(card);
-            });
-        }
-
-        // Seçim İşlemi
-        function selectFaction(id) {
-            document.querySelectorAll('.faction-card').forEach(card => {
-                card.classList.remove('selected');
-                if(card.dataset.id === id) {
-                    card.classList.add('selected');
-                }
-            });
-            selectedFaction = id;
-            startBtn.disabled = false;
-        }
-
-        // Bildirim Ekleme Fonksiyonu
-        function addLog(text) {
-            const msg = document.createElement('div');
-            msg.className = 'log-msg';
-            msg.innerText = text;
-            logPanel.appendChild(msg);
-            setTimeout(() => {
-                msg.remove();
-            }, 5000);
-        }
-
-        // Savaşı Başlat
-        startBtn.addEventListener('click', () => {
-            if(!selectedFaction) return;
-            mainMenu.style.opacity = '0';
-            setTimeout(() => {
-                mainMenu.style.display = 'none';
-                gameContainer.style.display = 'block';
-                
-                // Seçilen Hanedanı HUD'da Güncelle
-                const house = HousesData.find(h => h.id === selectedFaction);
-                document.getElementById('hud-sigil').innerText = house.sigil;
-                document.getElementById('hud-house-name').innerText = house.name;
-                
-                addLog(`Yüce Lordum, ${house.name} orduları emrinizi bekliyor!`);
-                addLog("Westeros Haritası oluşturuluyor... (Adım 2-3)");
-                
-                // Adım 2 ile başlayacak oyun başlatma tetikleyicisi
-                if(typeof initGameEngine === 'function') {
-                    initGameEngine(selectedFaction);
-                }
-            }, 500);
-        });
-
-        // Sayfa Yüklendiğinde Listeyi Doldur
-        window.addEventListener('load', renderFactions);
-    </script>
+    <!-- JS Dosyaları Entegrasyonu (Sırayla yüklenmelidir) -->
+    <script src="config.js" defer></script>
+    <script src="dnd-rules.js" defer></script>
+    <script src="engine.js" defer></script>
+    <script src="economy.js" defer></script>
+    <script src="combat.js" defer></script>
+    <script src="ai.js" defer></script>
+    <script src="ui-controller.js" defer></script>
 </body>
 </html>
