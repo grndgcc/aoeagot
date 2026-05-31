@@ -1106,3 +1106,130 @@ class NavalShip extends CombatUnit {
 
 // Global tanımlamaya NavalShip entegrasyonu
 window.NavalShip = NavalShip;
+/**
+ * combat.js - Ülkelere Özgü Özel Yeteneklerin Hesaplama Entegrasyonu
+ */
+
+// CombatUnit sınıfı içerisindeki hasar alma ve saldırma metodlarına kancalar (hooks) eklenir:
+
+const originalTakeDamage = CombatUnit.prototype.takeDamage;
+CombatUnit.prototype.takeDamage = function(amount, attacker) {
+    if (this.isDead) return;
+
+    // 1. Greyjoy "Relentless Endurance" Özelliği
+    // Birim ölümcül hasar alıp HP 0'a düşecekken CON kurtarma zarı (DC 10 + Alınan Hasar/2) atar.
+    // Başarılı olursa canı 0 yerine 1'de kalır (Sadece birim "drowned_reaver" ise geçerlidir)
+    if (this.unitType === 'drowned_reaver' && (this.currentHp - amount) <= 0) {
+        const dc = 10 + Math.floor(amount / 2);
+        const save = this.rollSavingThrow('CON');
+        if (save.total >= dc) {
+            this.currentHp = 1;
+            window.UI.writeBattleLog(`🌊 [Relentless Endurance] ${this.name} ölümcül hasar aldı ama inancıyla 1 HP ile hayatta kaldı! (Zar: ${save.total} vs DC: ${dc})`, 'success');
+            return;
+        }
+    }
+
+    // 2. Tyrell "Elegant Parry" Özelliği (Reaksiyon)
+    // Çiçek Şövalyesi, saldırı alırken d20 DEX zarı atarak AC'sini geçici olarak +3 artırabilir
+    if (this.unitType === 'knight_of_flowers' && attacker && Math.random() < 0.4) {
+        this.ac += 3;
+        window.UI.writeBattleLog(`🌹 [Elegant Parry] ${this.name} asilce parry yaptı, Zırh Sınıfı (AC) geçici olarak +3 arttı! (Mevcut AC: ${this.ac})`, 'success');
+        
+        // Saldırıyı parry sonrasına göre yeniden doğrula
+        const strMod = window.DnDRules.getModifier(attacker.stats.str);
+        const dexMod = window.DnDRules.getModifier(attacker.stats.dex);
+        const attackBonus = (attacker.weapon.type === 'ranged' ? dexMod : strMod) + window.DnDRules.getProficiencyBonus(attacker.cr || attacker.level);
+        const attackRoll = window.DnDRules.rollD20(attackBonus);
+        
+        this.ac -= 3; // Reaksiyon bitti, AC eski haline döner
+        
+        if (attackRoll.total < this.ac + 3) {
+            window.UI.writeBattleLog(`🌹 [Elegant Parry] Saldırı savuşturuldu!`, 'success');
+            return; // Hasarı tamamen yoksay
+        }
+    }
+
+    // Orijinal hasar alma mantığını çalıştır
+    originalTakeDamage.call(this, amount, attacker);
+};
+
+const originalExecuteAttack = CombatUnit.prototype.executeDnDAttack;
+CombatUnit.prototype.executeDnDAttack = function(target) {
+    if (this.isDead || target.isDead) return;
+
+    // Saldırı öncesi veya sırasında tetiklenen özel hasar mekanikleri
+    let originalDamageDice = this.weapon.damageDice;
+
+    // 1. Arryn "Dive Attack" Özelliği
+    // Eğer birim hareket halindeyken bir hedefe ilk saldırısını yapıyorsa hasar zarına +2d6 eklenir
+    if (this.unitType === 'falcon_knight' && this.path.length > 0) {
+        this.weapon.damageDice = originalDamageDice + '+2d6';
+        window.UI.writeBattleLog(`🦅 [Dive Attack] ${this.name} yüksek irtifadan süzülerek hücum etti! (+2d6 Hasar Zarı)`, 'success');
+    }
+
+    // Orijinal saldırı fonksiyonunu çağır
+    originalExecuteAttack.call(this, target);
+
+    // Hasar zarı formülünü eski orijinal haline getir
+    this.weapon.damageDice = originalDamageDice;
+
+    // Saldırı İSABET ettiyse tetiklenecek özel etkiler:
+    const isMelee = this.weapon.type !== 'ranged';
+    const strMod = window.DnDRules.getModifier(this.stats.str);
+    const dexMod = window.DnDRules.getModifier(this.stats.dex);
+    const attackBonus = (isMelee ? strMod : dexMod) + window.DnDRules.getProficiencyBonus(this.cr || this.level);
+    
+    // Basit bir isabet doğrulaması (Savaş motorunda isabet edip etmediği durumuna göre)
+    // Entegre edilen özel yan etki durumları:
+    if (this.target === target && !target.isDead) {
+        
+        // 2. Dorne "Viper\'s Kiss" Zehirleme Özelliği
+        if (this.unitType === 'sand_viper') {
+            target.addCondition('POISONED', 5.0); // 5 saniye zehirleme
+            window.UI.writeBattleLog(`🐍 [Viper's Kiss] Kum Engereği, ${target.name} birimini zehirledi! (Saniyede 2 D&D asit hasarı)`, 'damage');
+        }
+
+        // 3. Targaryen "Dragon Fire" Ateş Özelliği
+        if (this.unitType === 'dragon_guard') {
+            const fireDamage = window.DnDRules.rollDamage('1d6', this.stats, isMelee);
+            window.UI.writeBattleLog(`🔥 [Dragon Fire] Valyrian kılıcı alev aldı! Ekstra ${fireDamage} ateş hasarı verildi.`, 'damage');
+            target.takeDamage(fireDamage, this);
+        }
+
+        // 4. Baratheon "Thunderous Strike" Yıldırım/Ses Sarsıntısı
+        if (this.unitType === 'stormcaller_infantry') {
+            // Yıldırım etkisiyle hedef güç kurtarma zarı (STR Save) atar, başarısız olursa yere serilir ve itilir
+            const dc = 8 + window.DnDRules.getProficiencyBonus(this.cr || this.level) + strMod;
+            const save = target.rollSavingThrow('STR');
+            if (save.total < dc) {
+                target.addCondition('PRONE', 3.0);
+                target.pushAwayFrom(this.x, this.y, 2); // 2 kare fırlatılır
+                window.UI.writeBattleLog(`⚡ [Thunderous Strike] Fırtına çekici patladı! ${target.name} fırlatıldı ve yere serildi! (Zar: ${save.total} vs DC: ${dc})`, 'damage');
+            }
+        }
+    }
+};
+
+/**
+ * Zehir (POISONED) durum etkisinin saniyede bir can azaltma tick mekanizması
+ */
+const originalUpdateConditions = CombatUnit.prototype.updateConditions;
+CombatUnit.prototype.updateConditions = function(deltaTime) {
+    if (this.isDead) return;
+
+    if (this.conditions['POISONED']) {
+        if (!this.poisonTickTimer) this.poisonTickTimer = 0;
+        this.poisonTickTimer += deltaTime;
+        
+        if (this.poisonTickTimer >= 1.0) { // Her saniye 1 tick
+            this.poisonTickTimer = 0;
+            // Zehir saniyede sabitleştirilmiş 2 can götürür
+            this.currentHp = Math.max(1, this.currentHp - 2); 
+            window.UI.writeBattleLog(`🤢 [Zehir Etkisi] ${this.name} zehirden 2 hasar aldı. Kalan HP: ${this.currentHp}/${this.maxHp}`, 'damage');
+        }
+    } else {
+        this.poisonTickTimer = 0;
+    }
+
+    originalUpdateConditions.call(this, deltaTime);
+};
