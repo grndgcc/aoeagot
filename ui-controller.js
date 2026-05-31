@@ -316,3 +316,81 @@ document.addEventListener('DOMContentLoaded', () => {
     window.UI = new UIController();
     window.UI.init();
 });
+
+
+/**
+ * ui-controller.js - İnşaat Modu ve Fare Tıklama İşleyicileri Eki
+ */
+
+// UIController kurucusuna (constructor) eklenecek değişkenler:
+this.buildModeActive = false;
+this.selectedBuildingToBuild = null; // 'BARRACKS', 'HOUSE' vb.
+this.mouseGridX = 0;
+this.mouseGridY = 0;
+
+// UIController sınıfına eklenecek metodlar:
+
+/**
+ * İnşaat modunu aktifleştirir
+ */
+UIController.prototype.enterBuildMode = function(buildingKey) {
+    if (!BINDING_DATABASE[buildingKey]) return;
+    this.buildModeActive = true;
+    this.selectedBuildingToBuild = buildingKey;
+    this.writeBattleLog(`[İnşaat Modu] ${buildingKey} yerleştirmek için haritaya tıklayın. İptal için ESC.`, 'system');
+};
+
+/**
+ * Fare hareket ederken harita hücresi tespiti ve bina gölgesi çizimi tetikleyicisi
+ */
+UIController.prototype.handleBuildModeMouseMove = function(clientX, clientY, engine) {
+    if (!this.buildModeActive) return;
+
+    // Ekran koordinatından harita hücresi koordinatına dönüşüm
+    const rect = engine.canvas.getBoundingClientRect();
+    const relativeX = (clientX - rect.left - engine.canvas.width / 2) / engine.zoom + engine.camX;
+    const relativeY = (clientY - rect.top - engine.canvas.height / 2) / engine.zoom + engine.camY;
+
+    this.mouseGridX = Math.floor(relativeX / engine.tileSize);
+    this.mouseGridY = Math.floor(relativeY / engine.tileSize);
+    
+    // Sınır koruması
+    this.mouseGridX = Math.max(0, Math.min(GAME_CONFIG.MAP_SIZE - 1, this.mouseGridX));
+    this.mouseGridY = Math.max(0, Math.min(GAME_CONFIG.MAP_SIZE - 1, this.mouseGridY));
+};
+
+/**
+ * Tıklama ile Blueprint inşaat yerleşimini tetikleme
+ */
+UIController.prototype.handleBuildModeClick = function(engine) {
+    if (!this.buildModeActive || !this.selectedBuildingToBuild) return;
+
+    const mapData = engine.mapData;
+    const faction = this.selectedFaction;
+
+    const newBuilding = window.Economy.placeBuildingBlueprint(
+        this.selectedBuildingToBuild, 
+        this.mouseGridX, 
+        this.mouseGridY, 
+        faction, 
+        mapData
+    );
+
+    if (newBuilding) {
+        // İnşaat modu başarılıysa sonlandır
+        this.buildModeActive = false;
+        this.selectedBuildingToBuild = null;
+        
+        // Canvas alanını yeniden çizdir
+        engine.render();
+    }
+};
+
+/**
+ * İptal etme mantığı (Sağ tık veya ESC ile tetiklenir)
+ */
+UIController.prototype.cancelBuildMode = function() {
+    this.buildModeActive = false;
+    this.selectedBuildingToBuild = null;
+    this.writeBattleLog(`[İnşaat] İnşaat modu iptal edildi.`, 'system');
+};
