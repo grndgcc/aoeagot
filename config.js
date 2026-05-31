@@ -484,3 +484,125 @@ GAME_CONFIG.NAVAL_TEMPLATES = {
         proficientSaves: ['STR', 'CON']
     }
 };
+/**
+ * config.js - 9 Krallığın Elit D&D 5.5e Özel Birimleri
+ */
+GAME_CONFIG.FACTION_SPECIAL_UNITS = {
+    'kuzey': {
+        id: 'direwolf_rider',
+        name: 'Stark Direwolf Süvarisi',
+        cr: 4,
+        level: 6,
+        hitDice: { count: 6, type: 10 },
+        stats: { str: 16, dex: 14, con: 18, int: 8, wis: 12, cha: 8 },
+        armor: { type: 'medium', baseAc: 14, hasShield: false }, // Deri/Zırh kaplama
+        weapon: { name: 'Ulu Isırık ve Mızrak', type: 'martial', damageDice: '2d8', mastery: 'TOPPLE' },
+        proficientSaves: ['STR', 'CON'],
+        specialAbility: 'DIRE_BITE', // Vurduğu hedefi yere serme olasılığı yüksektir
+        startResources: null
+    },
+    'batidiyar': {
+        id: 'crimson_guard',
+        name: 'Lannister Kızıl Muhafızı',
+        cr: 4,
+        level: 6,
+        hitDice: { count: 6, type: 10 },
+        stats: { str: 18, dex: 10, con: 16, int: 10, wis: 10, cha: 14 },
+        armor: { type: 'heavy', baseAc: 18, hasShield: true }, // Full Plate + Shield
+        weapon: { name: 'Kraliyet Halberdi', type: 'martial', damageDice: '1d10', mastery: 'SLOW' },
+        proficientSaves: ['STR', 'WIS'],
+        specialAbility: 'GOLDEN_RESOLVE', // Zihinsel etkilere ve korkuya karşı avantajlı
+        startResources: null
+    },
+    'demir-adalar': {
+        id: 'drowned_reaver',
+        name: 'Greyjoy Boğulmuş Yağmacısı',
+        cr: 3,
+        level: 5,
+        hitDice: { count: 5, type: 12 },
+        stats: { str: 17, dex: 12, con: 16, int: 8, wis: 11, cha: 9 },
+        armor: { type: 'light', baseAc: 12, hasShield: false }, // Hafif Deri Zırh
+        weapon: { name: 'Boğulmuş Balta', type: 'martial', damageDice: '1d12', mastery: 'CLEAVE' },
+        proficientSaves: ['STR', 'CON'],
+        specialAbility: 'RELENTLESS_ENDURANCE', // Canı 0'a düştüğünde 1 HP ile hayatta kalma şansı (D&D 5.5e Half-Orc özelliği)
+        startResources: null
+    },
+    'nehir-topraklari': {
+        id: 'river_sentinel',
+        name: 'Tully Nehir Gözcüsü',
+        cr: 3,
+        level: 5,
+        hitDice: { count: 5, type: 8 },
+        stats: { str: 12, dex: 17, con: 13, int: 10, wis: 14, cha: 11 },
+        armor: { type: 'medium', baseAc: 14, hasShield: false }, // Scale Mail
+        weapon: { name: 'Mızraklı Halberd', type: 'martial', damageDice: '1d10', mastery: 'PUSH' },
+        proficientSaves: ['DEX', 'WIS'],
+        specialAbility: 'SWIFT_WATER', // Bataklık (Swamp) ve sulak alanlarda hız cezalarından muaf olma
+        startResources: null
+    },
+    'vadi': {
+        id: 'falcon_knight',
+        name: 'Arryn Şahin Şövalyesi',
+        cr: 5,
+        level: 8,
+        hitDice: { count: 8, type: 10 },
+        stats: { str: 16, dex: 15, con: 14, int: 10, wis: 12, cha: 14 },
+        armor: { type: 'heavy', baseAc: 18, hasShield: true }, // Plate + Shield
+        weapon: { name: 'Gökkuşağı Kargısı', type: 'martial', damageDice: '1d12', mastery: 'TOPPLE' },
+        proficientSaves: ['STR', 'CHA'],
+        specialAbility: 'DIVE_ATTACK', // Koşarak/Süvari hücumuyla vurduğunda ekstra 2d6 delici hasar
+        startResources: null
+    },
+    'menzil': {
+        id: 'knight_of_flowers',
+        name: 'Tyrell Çiçek Şövalyesi',
+        cr: 4,
+        level: 7,
+        hitDice: { count: 7, type: 10 },
+        stats: { str: 14, dex: 18, con: 14, int: 11, wis: 12, cha: 16 },
+        armor: { type: 'medium', baseAc: 15, hasShield: false }, // Gösterişli Hafif Zırh
+        weapon: { name: 'Asil Flöre / Rapier', type: 'martial', damageDice: '1d8', mastery: 'VEX' },
+        proficientSaves: ['DEX', 'CHA'],
+        specialAbility: 'ELEGANT_PARRY', // Reaksiyon olarak AC değerini geçici olarak +3 artırma yeteneği
+        startResources: null
+    },
+    'tac-topraklari': {
+        id: 'dragon_guard',
+        name: 'Ejderha Muhafızı',
+        cr: 5,
+        level: 8,
+        hitDice: { count: 8, type: 10 },
+        stats: { str: 15, dex: 14, con: 15, int: 10, wis: 12, cha: 16 },
+        armor: { type: 'heavy', baseAc: 17, hasShield: false }, // Ejderha pulu kaplama zırh
+        weapon: { name: 'Valyrian Çeliği Kılıç', type: 'martial', damageDice: '1d10', mastery: 'GRAZE' },
+        proficientSaves: ['CON', 'CHA'],
+        specialAbility: 'DRAGON_FIRE', // Hasarına ekstra 1d6 ateş hasarı ekler, ateş direnci sağlar
+        startResources: null
+    },
+    'firtinadiyar': {
+        id: 'stormcaller_infantry',
+        name: 'Baratheon Fırtına Piyadesi',
+        cr: 4,
+        level: 6,
+        hitDice: { count: 6, type: 10 },
+        stats: { str: 18, dex: 10, con: 16, int: 9, wis: 11, cha: 12 },
+        armor: { type: 'heavy', baseAc: 17, hasShield: false }, // Ağır Plaka Zırh
+        weapon: { name: 'Fırtına Çekici / Warhammer', type: 'martial', damageDice: '2d6', mastery: 'PUSH' },
+        proficientSaves: ['STR', 'CON'],
+        specialAbility: 'THUNDEROUS_STRIKE', // Hedefi itip yere serme şansı olan elektrik/ses sarsıntılı saldırı
+        startResources: null
+    },
+    'dorne': {
+        id: 'sand_viper',
+        name: 'Martell Kum Engereği',
+        cr: 3,
+        level: 5,
+        hitDice: { count: 5, type: 8 },
+        stats: { str: 11, dex: 18, con: 13, int: 11, wis: 12, cha: 12 },
+        armor: { type: 'light', baseAc: 13, hasShield: false }, // Çöl Giysisi / Deri
+        weapon: { name: 'Zehirli Çift Kama / Spear', type: 'martial', damageDice: '1d6', mastery: 'VEX' },
+        proficientSaves: ['DEX', 'WIS'],
+        specialAbility: 'VIPERS_KISS', // Saldırı isabet ettiğinde hedefi zehirleme (Poisoned)
+        startResources: null
+    }
+};
