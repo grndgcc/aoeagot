@@ -354,6 +354,99 @@ class WesterosMapGenerator {
             }
         }
     }
+
+    /**
+ * config.js - D&D 5.5e (2024) Birim Tabanlı Sınıf Şablonları ve Silah Ustası (Weapon Mastery) Özellikleri
+ */
+GAME_CONFIG.WEAPON_MASTERIES = {
+    NICK: { name: 'Nick', desc: 'Ekstra hafif silah saldırısı yapma imkanı tanır.' },
+    GRAZE: { name: 'Graze', desc: 'Saldırı ıskalasa bile hedefe güç modifikasyonu kadar hasar verir.' },
+    TOPPLE: { name: 'Topple', desc: 'Hedefin Constitution kurtarma zarı atmasını gerektirir, başarısız olursa yere serilir (Prone).' },
+    SLOW: { name: 'Slow', desc: 'İsabet alan hedefin hareket hızını 10 feet (2 tile) düşürür.' },
+    CLEAVE: { name: 'Cleave', desc: 'Yakındaki ikincil bir hedefe tek bir saldırı ile ek hasar vurur.' },
+    VEX: { name: 'Vex', desc: 'İsabet halinde, bir sonraki saldırıda birime avantaj sağlar.' },
+    PUSH: { name: 'Push', desc: 'Hedefi 10 feet geriye doğru iter.' }
+};
+
+GAME_CONFIG.UNIT_TEMPLATES = {
+    COMMONER: {
+        id: 'villager',
+        name: 'İşçi / Villager',
+        cr: 0,
+        level: 1,
+        hitDice: { count: 1, type: 8 },
+        stats: { str: 10, dex: 10, con: 10, int: 10, wis: 10, cha: 10 },
+        armor: { type: 'unarmored', baseAc: 10, hasShield: false },
+        weapon: { name: 'İnşaat Baltası / Sopa', type: 'simple', damageDice: '1d4', mastery: 'SLOW' },
+        proficientSaves: []
+    },
+    LIGHT_INFANTRY: {
+        id: 'guardsman',
+        name: 'Kuzeyli Muhafız / Spearmen',
+        cr: 0.125, // 1/8
+        level: 1,
+        hitDice: { count: 1, type: 10 },
+        stats: { str: 12, dex: 12, con: 12, int: 9, wis: 10, cha: 9 },
+        armor: { type: 'medium', baseAc: 13, hasShield: true }, // Chain Shirt + Shield
+        weapon: { name: 'Mızrak', type: 'martial', damageDice: '1d6', mastery: 'SLOW' },
+        proficientSaves: ['STR']
+    },
+    HEAVY_INFANTRY: {
+        id: 'man_at_arms',
+        name: 'Ağır Piyade / Man-at-Arms',
+        cr: 1,
+        level: 2,
+        hitDice: { count: 2, type: 10 },
+        stats: { str: 16, dex: 10, con: 15, int: 10, wis: 10, cha: 10 },
+        armor: { type: 'heavy', baseAc: 16, hasShield: false }, // Chain Mail
+        weapon: { name: 'Ulu Kılıç', type: 'martial', damageDice: '2d6', mastery: 'GRAZE' },
+        proficientSaves: ['STR', 'CON']
+    },
+    LONGBOWMAN: {
+        id: 'longbowman',
+        name: 'Uzun Yaycı / Longbowman',
+        cr: 0.5, // 1/2
+        level: 1,
+        hitDice: { count: 1, type: 8 },
+        stats: { str: 11, dex: 16, con: 12, int: 10, wis: 12, cha: 10 },
+        armor: { type: 'light', baseAc: 11, hasShield: false }, // Leather Armor
+        weapon: { name: 'Uzun Yay', type: 'ranged', damageDice: '1d8', mastery: 'VEX' },
+        proficientSaves: ['DEX']
+    },
+    KNIGHT: {
+        id: 'knight',
+        name: 'Yeminli Şövalye / Heavy Cavalry',
+        cr: 3,
+        level: 5,
+        hitDice: { count: 5, type: 10 },
+        stats: { str: 18, dex: 11, con: 16, int: 11, wis: 12, cha: 14 },
+        armor: { type: 'heavy', baseAc: 18, hasShield: true }, // Plate Mail + Shield
+        weapon: { name: 'Kargı / Lance', type: 'martial', damageDice: '1d12', mastery: 'TOPPLE' },
+        proficientSaves: ['STR', 'CON', 'WIS']
+    },
+    ALCHEMIST: {
+        id: 'pyromancer',
+        name: 'Simyacı / Maester',
+        cr: 2,
+        level: 3,
+        hitDice: { count: 3, type: 6 },
+        stats: { str: 9, dex: 12, con: 12, int: 16, wis: 14, cha: 11 },
+        armor: { type: 'unarmored', baseAc: 10, hasShield: false },
+        weapon: { name: 'Vahşi Ateş Şişesi', type: 'magic', damageDice: '2d6', mastery: 'CLEAVE' },
+        proficientSaves: ['INT', 'WIS']
+    },
+    COMMANDER: {
+        id: 'commander',
+        name: 'Ordu Komutanı / Commander',
+        cr: 4,
+        level: 7,
+        hitDice: { count: 7, type: 10 },
+        stats: { str: 16, dex: 12, con: 14, int: 14, wis: 14, cha: 16 },
+        armor: { type: 'heavy', baseAc: 18, hasShield: false }, // Plate
+        weapon: { name: 'Görkemli Çelik Kılıç', type: 'martial', damageDice: '1d10', mastery: 'PUSH' },
+        proficientSaves: ['STR', 'CHA', 'WIS']
+    }
+};
 }
 
 // MapGenerator nesnesi küresel olarak erişilebilir kılınır
