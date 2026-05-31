@@ -451,3 +451,36 @@ GAME_CONFIG.UNIT_TEMPLATES = {
 
 // MapGenerator nesnesi küresel olarak erişilebilir kılınır
 window.WesterosGenerator = new WesterosMapGenerator(GAME_CONFIG.MAP_SIZE);
+
+
+/**
+ * config.js - D&D Gemi Şablonları Entegrasyonu
+ */
+GAME_CONFIG.NAVAL_TEMPLATES = {
+    TRANSPORT_SHIP: {
+        id: 'transport_ship',
+        name: 'Taşıma Gemisi',
+        cr: 1,
+        level: 3,
+        isNaval: true,
+        maxCargo: 10, // 10 İnsansı birim taşıyabilir
+        hitDice: { count: 4, type: 12 },
+        stats: { str: 14, dex: 8, con: 16, int: 0, wis: 0, cha: 0 },
+        armor: { type: 'heavy', baseAc: 12, hasShield: false }, // Ahşap gövde ACsi
+        weapon: { name: 'Eylemsiz', type: 'none', damageDice: '0d0', mastery: 'none' },
+        proficientSaves: ['CON']
+    },
+    WAR_GALLEY: {
+        id: 'war_galley',
+        name: 'Savaş Kadırgası',
+        cr: 3,
+        level: 5,
+        isNaval: true,
+        maxCargo: 3,
+        hitDice: { count: 6, type: 12 },
+        stats: { str: 20, dex: 12, con: 18, int: 0, wis: 0, cha: 0 },
+        armor: { type: 'heavy', baseAc: 15, hasShield: false }, // Kalın kaplama ahşap gövde
+        weapon: { name: 'Dev Balista', type: 'ranged', damageDice: '3d10', mastery: 'PUSH' }, // 3d10 hasar ve itme gücü
+        proficientSaves: ['STR', 'CON']
+    }
+};
