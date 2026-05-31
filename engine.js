@@ -593,3 +593,113 @@ if (window.AISystem) {
 if (window.AISystem) {
     window.AISystem.update(deltaTime);
 }
+/**
+ * ==========================================================================
+ * engine.js - Yol Bulma Optimizasyon Kuyruğu ve Bellek Yönetimi (Adım 10)
+ * ==========================================================================
+ * 220x220 devasa haritada işlemci dar boğazını önlemek amacıyla, birimlerin
+ * yol arama taleplerini sıraya dizip her karede maksimum 3 adet A* işlemi yapar.
+ */
+
+class PathRequestQueue {
+    constructor() {
+        this.queue = [];
+        this.maxCalculationsPerFrame = 3; // Kare başına izin verilen maksimum A* araması
+    }
+
+    /**
+     * Birim için yol talebini sıraya ekler
+     */
+    addRequest(unit, targetX, targetY) {
+        // Eski veya mükerrer talepleri temizle
+        this.queue = this.queue.filter(req => req.unit.id !== unit.id);
+        
+        this.queue.push({
+            unit: unit,
+            tx: targetX,
+            ty: targetY
+        });
+    }
+
+    /**
+     * Her oyun karesinde (frame) güncellenerek kuyruğu tüketir
+     */
+    update() {
+        if (this.queue.length === 0) return;
+
+        let processedCount = 0;
+        const pathfinder = window.GameEngine.groupMovement.pathfinder;
+
+        while (this.queue.length > 0 && processedCount < this.maxCalculationsPerFrame) {
+            const req = this.queue.shift();
+
+            if (req.unit && !req.unit.isDead) {
+                // A* araması burada işlemciyi yormadan sırayla gerçekleştirilir
+                const path = pathfinder.findPath(
+                    Math.floor(req.unit.x),
+                    Math.floor(req.unit.y),
+                    req.tx,
+                    req.ty,
+                    req.unit.isNaval
+                );
+
+                if (path.length > 0) {
+                    req.unit.path = path;
+                    req.unit.pathIndex = 0;
+
+                    // İşçi ise durumunu hareket olarak güncelle
+                    if (req.unit.villagerAI) {
+                        req.unit.villagerAI.state = 'MOVING_TO_RESOURCE';
+                    }
+                }
+            }
+            processedCount++;
+        }
+    }
+}
+
+// GameEngine kurucusuna (constructor) şu değişkenler eklenir:
+// this.pathQueue = new PathRequestQueue();
+// this.garbageCollectorTimer = 0;
+
+/**
+ * GameEngine update() metoduna dahil edilecek ek optimizasyon tetikleyicileri:
+ */
+GameEngine.prototype.performOptimizations = function(deltaTime) {
+    // 1. Yol talepleri kuyruğunu çalıştır
+    if (this.pathQueue) {
+        this.pathQueue.update();
+    }
+
+    // 2. Bellek Çöp Toplayıcı (Garbage Collector - Her 10 saniyede bir çalışır)
+    // Ölü birimleri ve haritadaki geçersiz yapı referanslarını bellekten temizler
+    this.garbageCollectorTimer += deltaTime;
+    if (this.garbageCollectorTimer >= 10.0) {
+        this.garbageCollectorTimer = 0;
+        this.collectGarbage();
+    }
+};
+
+/**
+ * Ölü birimleri ve atıl verileri RAM'den temizleyen yardımcı fonksiyon
+ */
+GameEngine.prototype.collectGarbage = function() {
+    // Ölü askeri birimleri listeden filtrele
+    if (this.combatEngine && this.combatEngine.unitsList) {
+        const initialCount = this.combatEngine.unitsList.length;
+        this.combatEngine.unitsList = this.combatEngine.unitsList.filter(unit => !unit.isDead);
+        
+        // Yeniden referans eşlemesi yap
+        this.unitsList = this.combatEngine.unitsList;
+
+        // Ölü işçileri ekonomi sisteminden çıkar
+        if (window.Economy && window.Economy.activeWorkers) {
+            window.Economy.activeWorkers = window.Economy.activeWorkers.filter(w => !w.entity.isDead);
+        }
+
+        const clearedCount = initialCount - this.unitsList.length;
+        if (clearedCount > 0) {
+            window.UI.writeBattleLog(`[Sistem] Bellek temizliği yapıldı: ${clearedCount} ölü referans RAM'den temizlendi.`, 'system');
+        }
+    }
+};
