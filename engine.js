@@ -584,3 +584,12 @@ if (this.unitsList) {
         }
     }
 }
+// GameEngine.init() metodunun sonuna eklenecek tetikleyici:
+if (window.AISystem) {
+    window.AISystem.init(selectedFaction, this.combatEngine, this.combatEngine);
+}
+
+// GameEngine.update(deltaTime) metodunun sonuna eklenecek tetikleyici:
+if (window.AISystem) {
+    window.AISystem.update(deltaTime);
+}
