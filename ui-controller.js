@@ -468,3 +468,31 @@ UIController.prototype.setupCombatInputHandlers = function(engine) {
 // if (this.selectionManager) {
 //     this.selectionManager.drawSelectionBox(this.ctx);
 // }
+// ui-controller.js - Sağ tık olay dinleyicisi içerisindeki seçili birim hareket yönlendirme bloğuna entegrasyonu:
+
+// const targetGridX, targetGridY koordinat tespiti sonrasına eklenir:
+const targetTile = engine.mapData[targetGridY][targetGridX];
+
+// Eğer sağ tıklanan hedef karede dost bir Gemi bulunuyorsa gemiye binme emri tetiklenir
+if (targetTile.unit && targetTile.unit.isNaval && targetTile.unit.faction === this.selectedFaction) {
+    const transportShip = targetTile.unit;
+    const selectedLandUnits = engine.selectionManager.selectedUnits;
+    
+    selectedLandUnits.forEach(unit => {
+        if (!unit.isNaval) {
+            // Birimi gemiye gitmesi için yönlendir, yanına vardığında gemiye binecek
+            unit.path = engine.groupMovement.pathfinder.findPath(
+                Math.floor(unit.x), Math.floor(unit.y),
+                transportShip.x, transportShip.y,
+                false
+            );
+            
+            // Yolun sonuna varıp varmadığını denetleyen update() içine kanca (hook) yerleştirilir:
+            unit.onReachedDestination = () => {
+                if (Math.hypot(unit.x - transportShip.x, unit.y - transportShip.y) <= 1.5) {
+                    transportShip.boardUnit(unit);
+                }
+            };
+        }
+    });
+}
