@@ -417,3 +417,74 @@ class EconomySystem {
 
 // Global olarak EconomySystem sınıfını bağla
 window.Economy = new EconomySystem();
+/**
+ * economy.js - Liman (Dock) ve Gemi Üretim Sistem Genişletmesi
+ */
+
+// Limandan gemi üretilmesini sağlayan metod
+EconomySystem.prototype.trainShip = function(shipTemplateId, dockBuilding) {
+    if (dockBuilding.type !== 'DOCK' || !dockBuilding.isCompleted) {
+        window.UI.writeBattleLog(`[Ekonomi Hatası] Gemi yalnızca tamamlanmış bir Limandan üretilebilir!`, 'damage');
+        return;
+    }
+
+    const template = GAME_CONFIG.NAVAL_TEMPLATES[shipTemplateId];
+    if (!template) return;
+
+    // Geminin D&D stat tabanlı maliyet ve süre analizini yap
+    const mathResult = window.DnDRules.calculateAoECostAndTrainTime(template);
+
+    // Kaynak kontrolü
+    if (!this.resourceManager.hasResources(mathResult.costs)) {
+        window.UI.writeBattleLog(`[Ekonomi] Gemi üretimi için kaynak yetersiz!`, 'damage');
+        return;
+    }
+
+    // Nüfus limiti kontrolü
+    if (this.resourceManager.currentPopulation >= this.resourceManager.maxPopulation) {
+        window.UI.writeBattleLog(`[Ekonomi] Nüfus sınırına ulaşıldı! Yeni ev inşa edin.`, 'damage');
+        return;
+    }
+
+    // Kaynakları kes
+    this.resourceManager.deductResources(mathResult.costs);
+    this.resourceManager.adjustPopulation(1);
+
+    // Limanın yanındaki su hücrelerinden (COAST/SEA) birine gemiyi spawn et
+    const spawnPos = this.findWaterTileAdjacentToDock(dockBuilding.gridX, dockBuilding.gridY);
+    if (spawnPos) {
+        setTimeout(() => {
+            const ship = new window.NavalShip(template, spawnPos.x, spawnPos.y, dockBuilding.faction);
+            window.GameEngine.unitsList.push(ship);
+            window.UI.writeBattleLog(`🚢 [Deniz Kuvvetleri] ${ship.name} suya indirildi!`, 'success');
+        }, mathResult.trainTime * 100); // Gerçek zamanlı test için milisaniyeye çevrilmiştir
+    } else {
+        window.UI.writeBattleLog(`[Ekonomi Hatası] Liman çevresinde gemi suya indirilecek uygun su alanı bulunamadı!`, 'damage');
+    }
+};
+
+/**
+ * Limanın çevresinde geminin doğabileceği boş bir COAST veya SEA hücresi bulur
+ */
+EconomySystem.prototype.findWaterTileAdjacentToDock = function(dockX, dockY) {
+    const offsets = [
+        { x: 0, y: -1 }, { x: 0, y: 1 }, { x: -1, y: 0 }, { x: 1, y: 0 },
+        { x: -1, y: -1 }, { x: 1, y: -1 }, { x: -1, y: 1 }, { x: 1, y: 1 },
+        { x: 0, y: -2 }, { x: 0, y: 2 }, { x: -2, y: 0 }, { x: 2, y: 0 }
+    ];
+
+    for (let off of offsets) {
+        const nx = dockX + off.x;
+        const ny = dockY + off.y;
+        if (nx >= 0 && nx < GAME_CONFIG.MAP_SIZE && ny >= 0 && ny < GAME_CONFIG.MAP_SIZE) {
+            const tile = window.GameEngine.mapData[ny][nx];
+            // Sadece deniz ve sığ sulara gemi spawn edilebilir
+            if (tile.type === 0 || tile.type === 1) {
+                if (!tile.unit || tile.unit.isDead) {
+                    return { x: nx, y: ny };
+                }
+            }
+        }
+    }
+    return null;
+};
