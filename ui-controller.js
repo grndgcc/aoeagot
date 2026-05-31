@@ -606,3 +606,86 @@ UIController.prototype.setupMobileTouchGestures = function(engine) {
         }
     });
 };
+/**
+ * ==========================================================================
+ * Westeros D&D 5.5e - Küresel Başlatıcı (Bootstrapper)
+ * ==========================================================================
+ * Oyuncu lobi ekranından "Savaşa Başla" butonuna tıkladığı anda tetiklenerek,
+ * haritayı kuran, kamera kontrol döngüsünü başlatan kancadır.
+ */
+
+UIController.prototype.launchGame = function(faction) {
+    // 1. Ekran geçiş animasyonunu tetikle
+    this.screenFactionSelect.classList.remove('active');
+    this.screenGame.classList.add('active');
+
+    // 2. Seçili ülkeye göre HUD başlığını güncelle
+    const factionData = GAME_CONFIG.FACTIONS[faction];
+    document.getElementById('txt-current-faction').innerText = `${factionData.name} (${factionData.house})`;
+
+    // 3. Oyun motorunu ilk kez seçili hane ile tetikle
+    window.GameEngine.init(faction);
+
+    // 4. Oyuncunun başlangıç belediye binası (Town Center) ve 3 işçisini yerleştir
+    this.spawnPlayerStartingBase(faction);
+
+    // 5. Giriş ve kontrolcü dinleyicilerini tamamen bağla
+    this.setupPCKeyboardControls(window.GameEngine);
+    this.setupCombatInputHandlers(window.GameEngine);
+    this.setupMobileTouchGestures(window.GameEngine);
+
+    // 6. Savaş döngüsüne klavye güncellemelerini besleyecek kancayı ekle
+    const originalUpdate = window.GameEngine.update;
+    window.GameEngine.update = function(deltaTime) {
+        // Klavye ile kamera hareketini her karede güncelle
+        window.UI.updateKeyboardCameraScroll(deltaTime, this);
+        
+        // Performans optimizasyonlarını çalıştır (Yol kuyruğu & Çöp Toplayıcı)
+        this.performOptimizations(deltaTime);
+
+        // Orijinal motor güncellemelerini sürdür (AI, Combat vb.)
+        originalUpdate.call(this, deltaTime);
+    };
+
+    this.writeBattleLog(`[Başlatıcı] Oyun motoru başarıyla kuruldu. D&D 5.5e kuralları aktif.`, 'success');
+};
+
+/**
+ * Oyuncu için başlangıç karargahını haritada konumlandırır
+ */
+UIController.prototype.spawnPlayerStartingBase = function(faction) {
+    const facInfo = GAME_CONFIG.FACTIONS[faction];
+    if (!facInfo) return;
+
+    const mapData = window.GameEngine.mapData;
+
+    // 1. Oyuncu Town Center (Belediye Binası) inşası (Tamamlanmış durumda)
+    const tcDb = BINDING_DATABASE.TOWN_CENTER;
+    const playerTC = new Building(tcDb, facInfo.startX, facInfo.startY, faction);
+    playerTC.progress = 100;
+    playerTC.hp = playerTC.maxHp;
+    playerTC.isCompleted = true;
+
+    window.Economy.buildings.push(playerTC);
+    window.Economy.resourceManager.addPopulationCap(tcDb.popCap);
+
+    // Harita hücresi blokajı
+    for (let y = facInfo.startY; y < facInfo.startY + tcDb.height; y++) {
+        for (let x = facInfo.startX; x < facInfo.startX + tcDb.width; x++) {
+            mapData[y][x].structure = playerTC;
+        }
+    }
+
+    // 2. 3 Adet Başlangıç İşçisini (Villager) doğur
+    for (let i = 0; i < 3; i++) {
+        window.GameEngine.combatEngine.spawnUnit(
+            GAME_CONFIG.UNIT_TEMPLATES.COMMONER,
+            facInfo.startX + tcDb.width + 1,
+            facInfo.startY + i,
+            faction
+        );
+    }
+
+    // Nüfus sayısını güncelle
+    window.Economy.resourceManager.adjustPopulation(3);
+};
