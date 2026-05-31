@@ -849,3 +849,260 @@ class CombatEngine {
 window.GameEngine.combatEngine = new CombatEngine();
 // Seçim yöneticisine erişim kolaylığı için listeyi engine üstünde referansla
 window.GameEngine.unitsList = window.GameEngine.combatEngine.unitsList;
+/**
+ * ==========================================================================
+ * combat.js - Gemi ve Deniz Taşımacılığı Sistemi (Naval System) Eki
+ * ==========================================================================
+ * Bu kısım, deniz savaşlarını, gemiye binme/inme (Boarding/Unloading) mekaniğini,
+ * çarpma (Ramming) hasarlarını ve gemi battığında mürettebatın D&D kurtarma zarı
+ * atarak hayatta kalma simülasyonunu yönetir.
+ */
+
+class NavalShip extends CombatUnit {
+    constructor(template, x, y, faction) {
+        super(template, x, y, faction);
+        this.isNaval = true;
+        this.maxCargo = template.maxCargo || 0;
+        
+        // Gemi kargosunda taşınan kara birimlerinin dizisi
+        this.cargo = []; 
+    }
+
+    /**
+     * Kara birimini gemiye bindirme (Boarding) mantığı
+     */
+    boardUnit(landUnit) {
+        if (this.isDead || landUnit.isDead) return false;
+        if (this.cargo.length >= this.maxCargo) {
+            window.UI.writeBattleLog(`[Denizcilik] ${this.name} kargosu dolu! Kapasite: ${this.maxCargo}`, 'damage');
+            return false;
+        }
+
+        // Birimin dost olup olmadığını doğrula
+        if (landUnit.faction !== this.faction) {
+            window.UI.writeBattleLog(`[Denizcilik] Yabancı veya düşman birimler gemiye bindirilemez!`, 'damage');
+            return false;
+        }
+
+        // Birimi haritadaki aktif çizim ve güncelleme listesinden çıkar (Gizle)
+        const index = window.GameEngine.unitsList.indexOf(landUnit);
+        if (index > -1) {
+            window.GameEngine.unitsList.splice(index, 1);
+        }
+
+        // Kargo dizisine ekle ve koordinatlarını gemiyle eşle
+        landUnit.selected = false;
+        landUnit.path = [];
+        this.cargo.push(landUnit);
+
+        window.UI.writeBattleLog(`⚓ [Gemiye Binme] ${landUnit.name}, ${this.name} içerisine bindi. (Kargo: ${this.cargo.length}/${this.maxCargo})`, 'success');
+        return true;
+    }
+
+    /**
+     * Gemideki tüm kargoyu kıyıya indirme (Unloading / Disembark) mantığı
+     * @param {number} targetGridX, targetGridY - Karaya indirilmek istenen hedef kıyı hücresi
+     */
+    unloadCargo(targetGridX, targetGridY) {
+        if (this.cargo.length === 0) {
+            window.UI.writeBattleLog(`[Denizcilik] ${this.name} içerisinde indirilecek askeri birim bulunmuyor.`, 'system');
+            return;
+        }
+
+        // Hedef hücrenin gemiye komşu olup olmadığını ve karaya uygunluğunu denetle
+        const dist = Math.hypot(targetGridX - this.x, targetGridY - this.y);
+        if (dist > 1.5) {
+            window.UI.writeBattleLog(`[Denizcilik] Gemi kıyıya yeterince yakın değil! Mesafe: ${dist.toFixed(1)}`, 'damage');
+            return;
+        }
+
+        const mapData = window.GameEngine.mapData;
+        const targetTile = mapData[targetGridY][targetGridX];
+
+        // Karaya indirme yapılacak alanın kara birimleri için geçilebilirliğini denetle (Suya asker indirilemez)
+        const pathfinder = window.GameEngine.groupMovement.pathfinder;
+        if (!pathfinder.isTilePassable(targetGridX, targetGridY, false)) {
+            window.UI.writeBattleLog(`[Denizcilik] Belirlenen alan iniş için uygun değil! (Su, dağ veya bina engeli var)`, 'damage');
+            return;
+        }
+
+        let unloadedCount = 0;
+        const tempCargo = [...this.cargo];
+
+        for (let landUnit of tempCargo) {
+            // İniş yapılacak hücrenin doluluk durumunu kontrol et
+            if (targetTile.unit && !targetTile.unit.isDead) {
+                // Eğer hücre doluysa, etraftaki boş bir komşu hücre bulmaya çalış
+                const vacantNeighbor = this.findVacantLandNeighbor(targetGridX, targetGridY, pathfinder);
+                if (vacantNeighbor) {
+                    landUnit.x = vacantNeighbor.x;
+                    landUnit.y = vacantNeighbor.y;
+                } else {
+                    window.UI.writeBattleLog(`[Denizcilik] Kıyıda yer kalmadığı için çıkarma durduruldu!`, 'damage');
+                    break;
+                }
+            } else {
+                landUnit.x = targetGridX;
+                landUnit.y = targetGridY;
+            }
+
+            // Birimi tekrar haritadaki aktif güncelleme listesine dahil et (Göster)
+            window.GameEngine.unitsList.push(landUnit);
+            
+            // Kargodan sil
+            const cargoIndex = this.cargo.indexOf(landUnit);
+            if (cargoIndex > -1) {
+                this.cargo.splice(cargoIndex, 1);
+            }
+
+            unloadedCount++;
+        }
+
+        window.UI.writeBattleLog(`🌅 [Çıkarma] ${unloadedCount} askeri birim başarıyla karaya ayak bastı!`, 'success');
+    }
+
+    /**
+     * Boşta olan en yakın kara koordinatını bulma yardımcısı
+     */
+    findVacantLandNeighbor(gx, gy, pathfinder) {
+        const offsets = [
+            { x: 0, y: -1 }, { x: 0, y: 1 }, { x: -1, y: 0 }, { x: 1, y: 0 },
+            { x: -1, y: -1 }, { x: 1, y: -1 }, { x: -1, y: 1 }, { x: 1, y: 1 }
+        ];
+
+        for (let off of offsets) {
+            const nx = gx + off.x;
+            const ny = gy + off.y;
+            if (nx >= 0 && nx < GAME_CONFIG.MAP_SIZE && ny >= 0 && ny < GAME_CONFIG.MAP_SIZE) {
+                if (pathfinder.isTilePassable(nx, ny, false)) {
+                    const tile = window.GameEngine.mapData[ny][nx];
+                    if (!tile.unit || tile.unit.isDead) {
+                        return { x: nx, y: ny };
+                    }
+                }
+            }
+        }
+        return null;
+    }
+
+    /**
+     * D&D 5.5e Deniz Muharebeleri ve Savaş Gemisi Çarpma (Ramming) Saldırısı
+     * Savaş gemileri, diğer deniz araçlarına çarparak muazzam fiziksel hasar verebilir.
+     */
+    executeNavalAttack(target) {
+        if (!target.isNaval) {
+            window.UI.writeBattleLog(`[Savaş] Gemi yalnızca diğer gemilere saldırabilir!`, 'damage');
+            return;
+        }
+
+        const isRanged = this.weapon.type === 'ranged';
+        const dist = Math.hypot(target.x - this.x, target.y - this.y);
+
+        if (isRanged) {
+            // Balista Saldırısı (Menzilli d20)
+            super.executeDnDAttack(target);
+        } else {
+            // Yakın Temas Çarpma (Ramming) Saldırısı
+            if (dist > 1.5) {
+                this.path = [target]; // Hedefe doğru yanaş
+                return;
+            }
+
+            // Çarpma Gücü (Geminin Strength (Güç) modifikatörünü temel alır)
+            const strMod = window.DnDRules.getModifier(this.stats.str);
+            const profBonus = window.DnDRules.getProficiencyBonus(this.cr || this.level);
+            
+            // Çarpma Vuruş Zarı
+            const rollResult = window.DnDRules.rollD20(strMod + profBonus);
+            const isHit = rollResult.total >= target.ac;
+
+            if (isHit) {
+                // Çarpma Hasarı (4d12 Dev Ezici Hasar)
+                const damageFormula = '4d12';
+                const damage = window.DnDRules.rollDamage(damageFormula, this.stats, true);
+                
+                window.UI.writeBattleLog(`🚢 [ÇARPMA] ${this.name}, ${target.name} birimine tam güçle çarptı!`, 'damage');
+                target.takeDamage(damage, this);
+
+                // Geri Tepme Hasarı: Çarpan gemi de sarsıntı sebebiyle hasarın yarısını alır (D&D Gerçekçilik)
+                const recoilDamage = Math.floor(damage / 2);
+                window.UI.writeBattleLog(`💥 Çarpışma etkisiyle ${this.name} gövdesi ${recoilDamage} hasar aldı.`, 'damage');
+                this.takeDamage(recoilDamage, target);
+            } else {
+                window.UI.writeBattleLog(`🚢 [ÇARPMA] Çarpışma teğet geçti! Hasar oluşmadı.`, 'roll');
+            }
+        }
+    }
+
+    /**
+     * Gemi battığında içindeki mürettebat için D&D Boğulma / Kurtulma Kurtarma Zarı simülasyonu
+     */
+    die(attacker) {
+        this.isDead = true;
+        this.path = [];
+        this.selected = false;
+        
+        window.UI.writeBattleLog(`💀 [BATTI] ${this.name} (${this.faction}) sulara gömüldü!`, 'damage');
+
+        if (this.cargo.length > 0) {
+            window.UI.writeBattleLog(`⚠️ ${this.cargo.length} askeri birim batan geminin içerisinde mahsur kaldı!`, 'damage');
+
+            // En yakın kıyıyı bul
+            const nearestShore = this.findNearestVacantShore(this.x, this.y);
+
+            this.cargo.forEach(unit => {
+                // D&D 5.5e Constitution Kurtarma Zarı (DC 13 boğulma barajı)
+                // Başarısız olan birimler sular altında can verir, başarılılar kıyıya sürüklenir.
+                const dc = 13;
+                const save = window.DnDRules.rollSavingThrow('CON', unit.stats, unit.proficientSaves, unit.level);
+
+                if (save.total >= dc && nearestShore) {
+                    unit.x = nearestShore.x;
+                    unit.y = nearestShore.y;
+                    unit.currentHp = Math.max(1, Math.floor(unit.currentHp / 2)); // Kıyıya sığınırken canı yarıya iner
+                    window.GameEngine.unitsList.push(unit);
+                    window.UI.writeBattleLog(`⛵ [Boğulmaktan Kurtuldu] ${unit.name} can havliyle kıyıya (${nearestShore.x}, ${nearestShore.y}) sığındı!`, 'success');
+                } else {
+                    unit.isDead = true;
+                    window.UI.writeBattleLog(`💀 [BOĞULDU] ${unit.name} derin sularda can verdi.`, 'damage');
+                }
+            });
+
+            this.cargo = [];
+        }
+
+        if (this.selected) {
+            window.UI.updateSelectedUnitPanel(null);
+        }
+    }
+
+    /**
+     * Batan geminin etrafında sığınabileceği en yakın kara/kıyı hücresini tarar
+     */
+    findNearestVacantShore(gx, gy) {
+        const pathfinder = window.GameEngine.groupMovement.pathfinder;
+        // 5 kare yarıçapında tarama yapar
+        for (let radius = 1; radius <= 5; radius++) {
+            for (let dy = -radius; dy <= radius; dy++) {
+                for (let dx = -radius; dx <= radius; dx++) {
+                    if (Math.abs(dx) === radius || Math.abs(dy) === radius) {
+                        const nx = gx + dx;
+                        const ny = gy + dy;
+                        if (nx >= 0 && nx < GAME_CONFIG.MAP_SIZE && ny >= 0 && ny < GAME_CONFIG.MAP_SIZE) {
+                            if (pathfinder.isTilePassable(nx, ny, false)) {
+                                const tile = window.GameEngine.mapData[ny][nx];
+                                if (!tile.unit || tile.unit.isDead) {
+                                    return { x: nx, y: ny };
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        return null;
+    }
+}
+
+// Global tanımlamaya NavalShip entegrasyonu
+window.NavalShip = NavalShip;
