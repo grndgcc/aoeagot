@@ -496,3 +496,113 @@ if (targetTile.unit && targetTile.unit.isNaval && targetTile.unit.faction === th
         }
     });
 }
+/**
+ * ==========================================================================
+ * ui-controller.js - Mobil Pinch-to-Zoom ve Klavye/Kısayol Entegrasyonu (Adım 10)
+ * ==========================================================================
+ */
+
+// UIController kurucusuna (constructor) eklenecek dokunmatik takip değişkenleri:
+this.touchStartDist = 0;
+this.initialTouchZoom = 1;
+this.activeKeys = {}; // Basılı tutulan tuşların takibi (WASD kaydırması için)
+
+/**
+ * PC Klavye Girişlerini ve Kısayollarını Kaydeder
+ */
+UIController.prototype.setupPCKeyboardControls = function(engine) {
+    // Tuş basma takibi
+    window.addEventListener('keydown', (e) => {
+        this.activeKeys[e.key.toLowerCase()] = true;
+
+        // Age of Empires Tarzı Hızlı İnşaat/Üretim Kısayolları (Hotkey bindings)
+        // Eğer bir kışla veya işçi seçiliyse kısayollar tetiklenir
+        if (this.buildModeActive) {
+            if (e.key === 'Escape') this.cancelBuildMode();
+            return;
+        }
+
+        const selected = engine.selectionManager.selectedUnits;
+        if (selected && selected.length > 0) {
+            const leader = selected[0];
+            
+            if (leader.unitType === 'villager') {
+                // İşçi seçiliyken kısayollar
+                if (e.key === 'q' || e.key === 'Q') this.enterBuildMode('HOUSE');
+                if (e.key === 'w' || e.key === 'W') this.enterBuildMode('BARRACKS');
+                if (e.key === 'e' || e.key === 'E') this.enterBuildMode('DOCK');
+            } else if (leader.type === 'TOWN_CENTER') {
+                // Belediye binası seçiliyken Q ile işçi üretimi
+                if (e.key === 'q' || e.key === 'Q') {
+                    window.Economy.trainUnitInBuilding(leader, GAME_CONFIG.UNIT_TEMPLATES.COMMONER);
+                }
+            }
+        }
+    });
+
+    window.addEventListener('keyup', (e) => {
+        this.activeKeys[e.key.toLowerCase()] = false;
+    });
+};
+
+/**
+ * WASD veya Yön Tuşları Basılı Tutulduğunda Kamerayı Yumuşakça Kaydırır
+ */
+UIController.prototype.updateKeyboardCameraScroll = function(deltaTime, engine) {
+    const scrollSpeed = 400 * deltaTime; // Saniyede kat edilecek piksel mesafesi
+    let dx = 0;
+    let dy = 0;
+
+    if (this.activeKeys['w'] || this.activeKeys['arrowup']) dy = -scrollSpeed;
+    if (this.activeKeys['s'] || this.activeKeys['arrowdown']) dy = scrollSpeed;
+    if (this.activeKeys['a'] || this.activeKeys['arrowleft']) dx = -scrollSpeed;
+    if (this.activeKeys['d'] || this.activeKeys['arrowright']) dx = scrollSpeed;
+
+    if (dx !== 0 || dy !== 0) {
+        engine.camX += dx / engine.zoom;
+        engine.camY += dy / engine.zoom;
+        engine.clampCamera();
+    }
+};
+
+/**
+ * Mobil Cihazlar İçin Çift Parmak Dokunma Yakınlaştırma (Pinch-to-Zoom) Sistemi
+ * İki parmak arasındaki Euclidean mesafeyi hesaplayarak kamerayı yaklaştırır/uzaklaştırır.
+ */
+UIController.prototype.setupMobileTouchGestures = function(engine) {
+    const canvas = engine.canvas;
+
+    canvas.addEventListener('touchstart', (e) => {
+        if (e.touches.length === 2) {
+            e.preventDefault();
+            // İki dokunma noktası arasındaki başlangıç mesafesini hesapla
+            const t1 = e.touches[0];
+            const t2 = e.touches[1];
+            this.touchStartDist = Math.hypot(t1.clientX - t2.clientX, t1.clientY - t2.clientY);
+            this.initialTouchZoom = engine.zoom;
+        }
+    }, { passive: false });
+
+    canvas.addEventListener('touchmove', (e) => {
+        if (e.touches.length === 2 && this.touchStartDist > 0) {
+            e.preventDefault();
+            const t1 = e.touches[0];
+            const t2 = e.touches[1];
+            const currentDist = Math.hypot(t1.clientX - t2.clientX, t1.clientY - t2.clientY);
+
+            // Yakınlaştırma çarpanını hesapla
+            const factor = currentDist / this.touchStartDist;
+            const targetZoom = this.initialTouchZoom * factor;
+
+            // Zoom sınırlandırması uygula
+            engine.zoom = Math.max(GAME_CONFIG.MIN_ZOOM, Math.min(GAME_CONFIG.MAX_ZOOM, targetZoom));
+            engine.clampCamera();
+        }
+    }, { passive: false });
+
+    canvas.addEventListener('touchend', (e) => {
+        if (e.touches.length < 2) {
+            this.touchStartDist = 0; // Mesafe takibini sıfırla
+        }
+    });
+};
