@@ -363,3 +363,210 @@ class WeatherSystem {
 
 // Global motor nesnesini kaydet
 window.GameEngine = new GameEngine();
+/**
+ * engine.js - Programatik 2D Sanatsal Çizim Sınıfı Eki
+ * ==========================================================================
+ * Piksel bazlı sprite resimleri yerine yüksek kaliteli, performanslı ve
+ * her çözünürlükte net görünen HTML5 Canvas çizim motorunu kurar.
+ */
+
+class UnitArtist {
+    /**
+     * Bir birimi harita koordinatlarında görselleştirir
+     */
+    static draw(ctx, unit, tileSize, zoom) {
+        if (unit.isDead) return;
+
+        // Grid hücresinden piksel dünyasına dönüşüm (Merkezleme dahil)
+        const px = unit.x * tileSize + tileSize / 2;
+        const py = unit.y * tileSize + tileSize / 2;
+        const radius = tileSize * 0.38;
+
+        // Hareket doğrultusuna göre açıyı hesaplama (Yön bulma)
+        let angle = 0;
+        if (unit.path && unit.path.length > 0 && unit.path[unit.pathIndex]) {
+            const nextNode = unit.path[unit.pathIndex];
+            angle = Math.atan2(nextNode.y - unit.y, nextNode.x - unit.x);
+        }
+
+        ctx.save();
+        ctx.translate(px, py);
+
+        // 1. SEÇİLİ HALKASI (Glow Ring)
+        if (unit.selected) {
+            ctx.beginPath();
+            ctx.arc(0, 0, radius * 1.35, 0, Math.PI * 2);
+            ctx.strokeStyle = '#d4af37';
+            ctx.lineWidth = 2 / zoom;
+            ctx.shadowColor = '#d4af37';
+            ctx.shadowBlur = 10 * zoom;
+            ctx.stroke();
+            ctx.shadowBlur = 0; // Gölge sıfırlama
+        }
+
+        // 2. AKTİF D&D DURUM EFEKTLERİ (Arka Plan Çizimi)
+        if (unit.conditions['SLOWED']) {
+            // Yavaşlatılmış birimlere mavi donma çemberi çizilir
+            ctx.beginPath();
+            ctx.arc(0, 0, radius, 0, Math.PI * 2);
+            ctx.fillStyle = 'rgba(100, 180, 255, 0.25)';
+            ctx.fill();
+        }
+
+        // Yön rotasyonu uygulanır (Binek ve kılıç yönü için)
+        ctx.rotate(angle);
+
+        // 3. SAVAŞ BİNEĞİ VEYA GÖVDESİ (Süvariler ve Canavarlar İçin)
+        const factionColor = GAME_CONFIG.FACTIONS[unit.faction]?.primaryColor || '#d4af37';
+        const secondColor = GAME_CONFIG.FACTIONS[unit.faction]?.secondaryColor || '#222';
+
+        if (unit.unitType === 'direwolf_rider') {
+            // Stark Ulu Kurt Bineği Çizimi (Büyük gri elips gövde ve pençeler)
+            ctx.fillStyle = '#6e7680';
+            ctx.beginPath();
+            ctx.ellipse(0, 0, radius * 1.5, radius * 0.7, 0, 0, Math.PI * 2);
+            ctx.fill();
+            // Kurt Baş Hattı
+            ctx.fillStyle = '#4f555c';
+            ctx.beginPath();
+            ctx.arc(radius * 1.1, 0, radius * 0.45, 0, Math.PI * 2);
+            ctx.fill();
+        } else if (unit.unitType === 'falcon_knight') {
+            // Arryn Göklerin Şahini Bineği (Beyaz devasa kanat hatları)
+            ctx.fillStyle = '#e1e5eb';
+            ctx.beginPath();
+            ctx.ellipse(0, 0, radius * 1.2, radius * 0.5, 0, 0, Math.PI * 2);
+            ctx.fill();
+            // Kanatlar
+            ctx.strokeStyle = '#ffffff';
+            ctx.lineWidth = 3;
+            ctx.beginPath();
+            ctx.moveTo(0, -radius * 0.4);
+            ctx.lineTo(-radius * 0.5, -radius * 1.6);
+            ctx.moveTo(0, radius * 0.4);
+            ctx.lineTo(-radius * 0.5, radius * 1.6);
+            ctx.stroke();
+        } else if (unit.isNaval) {
+            // Gemi Çizimi (Ahşap kadırga silueti)
+            ctx.fillStyle = '#7d522a';
+            ctx.beginPath();
+            ctx.moveTo(-radius * 1.8, -radius * 0.7);
+            ctx.lineTo(radius * 1.8, 0); // Burun
+            ctx.lineTo(-radius * 1.8, radius * 0.7);
+            ctx.closePath();
+            ctx.fill();
+            // Yelken Direği
+            ctx.fillStyle = '#f5f5f5';
+            ctx.fillRect(-radius * 0.3, -radius * 0.8, radius * 0.6, radius * 1.6);
+            ctx.restore();
+            return; // Gemi çizimi tamamlandı, insansı süslemelerini geç
+        }
+
+        // 4. İNSANSI ANA GÖVDE (Zırhlı Savaşçı Yuvarlağı)
+        const bodyGrad = ctx.createRadialGradient(0, 0, radius * 0.2, 0, 0, radius);
+        bodyGrad.addColorStop(0, secondColor);
+        bodyGrad.addColorStop(1, factionColor);
+        
+        ctx.fillStyle = bodyGrad;
+        ctx.beginPath();
+        
+        // Eğer birim Prone (yere serilmiş) ise elips şeklinde yassı çizilir (D&D 5.5e kural simülasyonu)
+        if (unit.conditions['PRONE']) {
+            ctx.ellipse(0, 0, radius * 0.9, radius * 0.4, 0, 0, Math.PI * 2);
+        } else {
+            ctx.arc(0, 0, radius, 0, Math.PI * 2);
+        }
+        ctx.fill();
+
+        ctx.strokeStyle = '#111';
+        ctx.lineWidth = 2;
+        ctx.stroke();
+
+        // 5. SİLAH VE KALKAN GRAFİKLERİ
+        ctx.fillStyle = '#cccccc'; // Çelik rengi
+        
+        if (unit.armor.hasShield) {
+            // Sol kola kalkan çizimi (Örn: Lannister zırh kalkanı)
+            ctx.fillStyle = '#b89c30';
+            ctx.beginPath();
+            ctx.arc(-radius * 0.3, -radius * 0.8, radius * 0.35, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.strokeStyle = '#fff';
+            ctx.stroke();
+        }
+
+        // Silah Çizimi (Sağ kol kılıç, balta veya yay uzantısı)
+        ctx.strokeStyle = '#dddddd';
+        ctx.lineWidth = 3 / zoom;
+        ctx.beginPath();
+        if (unit.weapon.type === 'ranged') {
+            // Yay çizen yay gergisi yayı
+            ctx.arc(radius * 0.5, 0, radius * 0.5, -Math.PI / 3, Math.PI / 3);
+            ctx.stroke();
+        } else {
+            // Yakın dövüş kılıç / balta çizgisi (İleriye dönük doğrultuda)
+            ctx.moveTo(radius * 0.5, radius * 0.5);
+            ctx.lineTo(radius * 1.4, radius * 0.5);
+            ctx.stroke();
+        }
+
+        // 6. DETAYLI SÜSLEMELER (Kraliyet Pelerini ve Armalar)
+        if (unit.unitType === 'dragon_guard') {
+            // Targaryen pelerini (Ateş kırmızısı)
+            ctx.fillStyle = '#bf1c1c';
+            ctx.beginPath();
+            ctx.moveTo(-radius * 0.8, -radius * 0.5);
+            ctx.lineTo(-radius * 1.5, 0);
+            ctx.lineTo(-radius * 0.8, radius * 0.5);
+            ctx.closePath();
+            ctx.fill();
+        } else if (unit.unitType === 'sand_viper') {
+            // Çöl kum fuları (Turuncu peçe)
+            ctx.strokeStyle = '#de8212';
+            ctx.lineWidth = 4;
+            ctx.beginPath();
+            ctx.arc(radius * 0.4, 0, radius * 0.6, -Math.PI / 4, Math.PI / 4);
+            ctx.stroke();
+        }
+
+        ctx.restore();
+
+        // 7. FLOATING BARS (CAN BARLARI VE KOŞUL İKONLARI - Rotasyonsuz)
+        ctx.save();
+        ctx.translate(px, py);
+
+        // Can Barı Kutusu
+        const barW = tileSize * 0.9;
+        const barH = 5 / zoom;
+        const barY = -radius * 1.5;
+
+        ctx.fillStyle = 'rgba(0,0,0,0.6)';
+        ctx.fillRect(-barW / 2, barY, barW, barH);
+
+        // Kalan Can Oranı
+        const hpRatio = unit.currentHp / unit.maxHp;
+        ctx.fillStyle = hpRatio > 0.5 ? '#2ecc71' : hpRatio > 0.2 ? '#f1c40f' : '#e74c3c';
+        ctx.fillRect(-barW / 2, barY, barW * hpRatio, barH);
+
+        // Can barı kenar çizgisi
+        ctx.strokeStyle = '#000000';
+        ctx.lineWidth = 1;
+        ctx.strokeRect(-barW / 2, barY, barW, barH);
+
+        // Üzerindeki Durum İkonlarının Çizilmesi (Icons above unit head)
+        if (unit.conditions['POISONED']) {
+            ctx.font = `bold ${10 / zoom}px Montserrat`;
+            ctx.fillStyle = '#2ecc71';
+            ctx.fillText('🤢 Zehir', -barW / 2, barY - 6);
+        } else if (unit.conditions['PRONE']) {
+            ctx.font = `bold ${10 / zoom}px Montserrat`;
+            ctx.fillStyle = '#e67e22';
+            ctx.fillText('🪨 Yıkık', -barW / 2, barY - 6);
+        }
+
+        ctx.restore();
+    }
+}
+
+// Global Çizim Motoru Sınıfına Entegrasyon
+window.UnitArtist = UnitArtist;
