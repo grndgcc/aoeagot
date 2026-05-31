@@ -570,3 +570,17 @@ class UnitArtist {
 
 // Global Çizim Motoru Sınıfına Entegrasyon
 window.UnitArtist = UnitArtist;
+// engine.js - render() metodundaki harita kareleri çizildikten sonraki kısımlar:
+
+// 1. Askeri ve Deniz Birimlerinin Çizimi
+if (this.unitsList) {
+    for (let unit of this.unitsList) {
+        // Viewport Culling: Sadece ekrandaki hücrelerde duran birimleri çiz
+        if (unit.x >= renderStartX && unit.x <= renderEndX &&
+            unit.y >= renderStartY && unit.y <= renderEndY) {
+            
+            // Programatik görsel çiziciyi çağırır
+            window.UnitArtist.draw(this.ctx, unit, curTileSize, this.zoom);
+        }
+    }
+}
