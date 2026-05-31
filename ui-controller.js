@@ -393,3 +393,78 @@ UIController.prototype.cancelBuildMode = function() {
     this.selectedBuildingToBuild = null;
     this.writeBattleLog(`[İnşaat] İnşaat modu iptal edildi.`, 'system');
 };
+
+/**
+ * ui-controller.js - RTS Fare Seçim Sürüklemesi ve Sağ Tık Hareket Komutu Entegrasyonu
+ */
+
+// Sınıfın init() metoduna eklenecek olay dinleyiciler (Event Listeners):
+
+UIController.prototype.setupCombatInputHandlers = function(engine) {
+    const canvas = engine.canvas;
+
+    canvas.addEventListener('mousedown', (e) => {
+        // İnşaat modu aktifse bu akışı kes
+        if (this.buildModeActive) {
+            this.handleBuildModeClick(engine);
+            return;
+        }
+
+        if (e.button === 0) { // Sol Tık (Seçim Başlat)
+            const rect = canvas.getBoundingClientRect();
+            engine.selectionManager.startSelection(e.clientX - rect.left, e.clientY - rect.top);
+        }
+    });
+
+    canvas.addEventListener('mousemove', (e) => {
+        const rect = canvas.getBoundingClientRect();
+        const mouseX = e.clientX - rect.left;
+        const mouseY = e.clientY - rect.top;
+
+        // İnşaat önizleme koordinatlarını güncelle
+        if (this.buildModeActive) {
+            this.handleBuildModeMouseMove(e.clientX, e.clientY, engine);
+            return;
+        }
+
+        // Sol tık basılı sürükleniyorsa seçim kutusunu büyüt
+        if (engine.selectionManager.isSelecting) {
+            engine.selectionManager.updateSelectionBox(mouseX, mouseY);
+        }
+    });
+
+    canvas.addEventListener('mouseup', (e) => {
+        if (e.button === 0) { // Sol Tık Bırakıldı (Seçimi Bitir)
+            if (engine.selectionManager.isSelecting) {
+                // Burada mock birim listesi verilebilir, asıl entegrasyonda küresel birim listesi beslenir
+                const allUnits = window.GameEngine.unitsList || []; 
+                engine.selectionManager.endSelection(this.selectedFaction, allUnits);
+            }
+        }
+    });
+
+    canvas.addEventListener('contextmenu', (e) => {
+        e.preventDefault(); // Varsayılan tarayıcı sağ tık menüsünü engelle
+
+        if (this.buildModeActive) {
+            this.cancelBuildMode();
+            return;
+        }
+
+        // Sağ Tık (Hareket Emri)
+        const rect = canvas.getBoundingClientRect();
+        const worldCoords = engine.selectionManager.screenToWorld(e.clientX - rect.left, e.clientY - rect.top);
+        const targetGridX = Math.floor(worldCoords.x / GAME_CONFIG.BASE_TILE_SIZE);
+        const targetGridY = Math.floor(worldCoords.y / GAME_CONFIG.BASE_TILE_SIZE);
+
+        const selected = engine.selectionManager.selectedUnits;
+        if (selected.length > 0) {
+            engine.groupMovement.orderGroupMovement(selected, targetGridX, targetGridY);
+        }
+    });
+};
+
+// GameEngine'in render() metodunun en sonuna seçim kutusunun çizilmesi eklenmelidir:
+// if (this.selectionManager) {
+//     this.selectionManager.drawSelectionBox(this.ctx);
+// }
