@@ -321,3 +321,9 @@ document.addEventListener('DOMContentLoaded', () => {
         console.groupEnd();
     }
 });
+// dnd-rules.js - Başlangıç alanına veya kurucu metoda (constructor) eklenecek satır:
+this.logCallback = function(msg, type) {
+    if (window.UI && window.UI.writeBattleLog) {
+        window.UI.writeBattleLog(msg, type);
+    }
+};
