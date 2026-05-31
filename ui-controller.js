@@ -317,7 +317,6 @@ document.addEventListener('DOMContentLoaded', () => {
     window.UI.init();
 });
 
-
 /**
  * ui-controller.js - İnşaat Modu ve Fare Tıklama İşleyicileri Eki
  */
