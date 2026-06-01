@@ -19,6 +19,11 @@ class UIController {
 
         // DOM Elementlerini Bağlama
         this.bindElements();
+
+        // Adım 10 - Dokunmatik ve Klavye Takip Değişkenleri (Sınıf İçi Kapsam Tanımlamaları)
+        this.touchStartDist = 0;
+        this.initialTouchZoom = 1;
+        this.activeKeys = {}; // Basılı tutulan tuşların takibi (WASD kaydırması için)
     }
 
     /**
@@ -264,7 +269,9 @@ class UIController {
         // D&D Statlarının Atanması
         this.infoUnitName.innerText = unitData.name || "Bilinmeyen Birim";
         this.infoUnitType.innerText = unitData.type || "İnsansı";
-        this.infoUnitAvatar.src = unitData.avatarUrl || "assets/avatar-placeholder.png";
+        
+        // 404 Hatalarını Tamamen Engellemek İçin Programatik Inline SVG Vektör Görsel Desteği
+        this.infoUnitAvatar.src = unitData.avatarUrl || "data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='60' height='60' viewBox='0 0 60 60'><rect width='60' height='60' fill='%231a202c'/><path d='M30 15a8 8 0 1 0 0 16 8 8 0 0 0 0-16zM15 45c0-8.3 6.7-15 15-15s15 6.7 15 15' stroke='%23d4af37' stroke-width='2' fill='none'/></svg>";
         
         this.statStr.innerText = unitData.stats.str;
         this.statDex.innerText = unitData.stats.dex;
@@ -321,10 +328,6 @@ document.addEventListener('DOMContentLoaded', () => {
  * ui-controller.js - İnşaat Modu ve Fare Tıklama İşleyicileri Eki
  */
 
-// UIController kurucusuna (constructor) eklenecek değişkenler:
-this.buildModeActive = false;
-this.selectedBuildingToBuild = null; // 'BARRACKS', 'HOUSE' vb.
-this.mouseGridX = 0;
 this.mouseGridY = 0;
 
 // UIController sınıfına eklenecek metodlar:
@@ -499,15 +502,9 @@ UIController.prototype.setupCombatInputHandlers = function(engine) {
 // }
 
 /**
- * ==========================================================================
  * ui-controller.js - Mobil Pinch-to-Zoom ve Klavye/Kısayol Entegrasyonu (Adım 10)
  * ==========================================================================
  */
-
-// UIController kurucusuna (constructor) eklenecek dokunmatik takip değişkenleri:
-this.touchStartDist = 0;
-this.initialTouchZoom = 1;
-this.activeKeys = {}; // Basılı tutulan tuşların takibi (WASD kaydırması için)
 
 /**
  * PC Klavye Girişlerini ve Kısayollarını Kaydeder
@@ -608,6 +605,7 @@ UIController.prototype.setupMobileTouchGestures = function(engine) {
         }
     });
 };
+
 /**
  * ==========================================================================
  * Westeros D&D 5.5e - Küresel Başlatıcı (Bootstrapper)
