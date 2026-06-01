@@ -451,15 +451,44 @@ UIController.prototype.setupCombatInputHandlers = function(engine) {
             return;
         }
 
-        // Sağ Tık (Hareket Emri)
+        // Sağ Tık (Hareket/Bindirme Emri)
         const rect = canvas.getBoundingClientRect();
         const worldCoords = engine.selectionManager.screenToWorld(e.clientX - rect.left, e.clientY - rect.top);
         const targetGridX = Math.floor(worldCoords.x / GAME_CONFIG.BASE_TILE_SIZE);
         const targetGridY = Math.floor(worldCoords.y / GAME_CONFIG.BASE_TILE_SIZE);
 
+        // Grid sınırları koruması
+        if (targetGridX < 0 || targetGridX >= GAME_CONFIG.MAP_SIZE || targetGridY < 0 || targetGridY >= GAME_CONFIG.MAP_SIZE) return;
+
+        const targetTile = engine.mapData[targetGridY][targetGridX];
         const selected = engine.selectionManager.selectedUnits;
+
         if (selected.length > 0) {
-            engine.groupMovement.orderGroupMovement(selected, targetGridX, targetGridY);
+            // Eğer sağ tıklanan hedef karede dost bir Gemi bulunuyorsa gemiye binme emri tetiklenir
+            if (targetTile.unit && targetTile.unit.isNaval && targetTile.unit.faction === this.selectedFaction) {
+                const transportShip = targetTile.unit;
+                
+                selected.forEach(unit => {
+                    if (!unit.isNaval) {
+                        // Birimi gemiye gitmesi için yönlendir, yanına vardığında gemiye binecek
+                        unit.path = engine.groupMovement.pathfinder.findPath(
+                            Math.floor(unit.x), Math.floor(unit.y),
+                            transportShip.x, transportShip.y,
+                            false
+                        );
+                        
+                        // Yolun sonuna varıp varmadığını denetleyen update() içine kanca (hook) yerleştirilir:
+                        unit.onReachedDestination = () => {
+                            if (Math.hypot(unit.x - transportShip.x, unit.y - transportShip.y) <= 1.5) {
+                                transportShip.boardUnit(unit);
+                            }
+                        };
+                    }
+                });
+            } else {
+                // Standart grup hareketi
+                engine.groupMovement.orderGroupMovement(selected, targetGridX, targetGridY);
+            }
         }
     });
 };
@@ -468,34 +497,7 @@ UIController.prototype.setupCombatInputHandlers = function(engine) {
 // if (this.selectionManager) {
 //     this.selectionManager.drawSelectionBox(this.ctx);
 // }
-// ui-controller.js - Sağ tık olay dinleyicisi içerisindeki seçili birim hareket yönlendirme bloğuna entegrasyonu:
 
-// const targetGridX, targetGridY koordinat tespiti sonrasına eklenir:
-const targetTile = engine.mapData[targetGridY][targetGridX];
-
-// Eğer sağ tıklanan hedef karede dost bir Gemi bulunuyorsa gemiye binme emri tetiklenir
-if (targetTile.unit && targetTile.unit.isNaval && targetTile.unit.faction === this.selectedFaction) {
-    const transportShip = targetTile.unit;
-    const selectedLandUnits = engine.selectionManager.selectedUnits;
-    
-    selectedLandUnits.forEach(unit => {
-        if (!unit.isNaval) {
-            // Birimi gemiye gitmesi için yönlendir, yanına vardığında gemiye binecek
-            unit.path = engine.groupMovement.pathfinder.findPath(
-                Math.floor(unit.x), Math.floor(unit.y),
-                transportShip.x, transportShip.y,
-                false
-            );
-            
-            // Yolun sonuna varıp varmadığını denetleyen update() içine kanca (hook) yerleştirilir:
-            unit.onReachedDestination = () => {
-                if (Math.hypot(unit.x - transportShip.x, unit.y - transportShip.y) <= 1.5) {
-                    transportShip.boardUnit(unit);
-                }
-            };
-        }
-    });
-}
 /**
  * ==========================================================================
  * ui-controller.js - Mobil Pinch-to-Zoom ve Klavye/Kısayol Entegrasyonu (Adım 10)
