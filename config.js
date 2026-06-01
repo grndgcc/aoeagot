@@ -354,8 +354,9 @@ class WesterosMapGenerator {
             }
         }
     }
+}
 
-    /**
+/**
  * config.js - D&D 5.5e (2024) Birim Tabanlı Sınıf Şablonları ve Silah Ustası (Weapon Mastery) Özellikleri
  */
 GAME_CONFIG.WEAPON_MASTERIES = {
@@ -447,11 +448,9 @@ GAME_CONFIG.UNIT_TEMPLATES = {
         proficientSaves: ['STR', 'CHA', 'WIS']
     }
 };
-}
 
 // MapGenerator nesnesi küresel olarak erişilebilir kılınır
 window.WesterosGenerator = new WesterosMapGenerator(GAME_CONFIG.MAP_SIZE);
-
 
 /**
  * config.js - D&D Gemi Şablonları Entegrasyonu
@@ -484,6 +483,7 @@ GAME_CONFIG.NAVAL_TEMPLATES = {
         proficientSaves: ['STR', 'CON']
     }
 };
+
 /**
  * config.js - 9 Krallığın Elit D&D 5.5e Özel Birimleri
  */
